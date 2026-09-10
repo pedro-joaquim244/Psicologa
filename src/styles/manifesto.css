@@ -1,0 +1,20 @@
+.manifesto-section { background: var(--forest); color: var(--paper); padding-block: var(--space-xl) var(--space-section); min-height: 90svh; display: flex; align-items: center; }
+.manifesto-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-xl); }
+.manifesto-top .eyebrow { color: var(--color-on-dark-muted); }
+.manifesto-top .floral-mark { color: var(--color-on-dark-muted); }
+.manifesto-section h2 { font-size: var(--fs-display-xl); line-height: 1.02; letter-spacing: -.04em; }
+.manifesto-section h2 em { color: var(--color-on-dark-muted); }
+.manifesto-section h2 > span:last-child { padding-left: 29%; font-size: 1.2em; }
+.manifesto-bottom { display: flex; align-items: center; gap: var(--space-md); margin-top: var(--space-xl); }
+.manifesto-bottom p { font-family: var(--serif); font-size: var(--fs-heading); }
+.manifesto-line { width: 55px; height: 1px; background: var(--color-on-dark-muted); }
+.manifesto-bottom .eyebrow { margin-left: auto; font-size: var(--fs-label); color: var(--color-on-dark-muted); }
+@media (max-width: 650px) {
+  .manifesto-section { min-height: 720px; padding-block: var(--space-xl); }
+  .manifesto-section h2 { font-size: clamp(2.7rem, 11.3vw, 4rem); }
+  .manifesto-section h2 > span:last-child { padding-left: 12%; font-size: 1.25em; }
+  .manifesto-bottom { flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-lg); }
+  .manifesto-line { width: 24px; }
+  .manifesto-bottom p { font-size: 1.55rem; }
+  .manifesto-bottom .eyebrow { width: 100%; margin: var(--space-sm) 0 0; }
+}

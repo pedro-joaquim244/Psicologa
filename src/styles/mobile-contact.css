@@ -1,0 +1,8 @@
+.mobile-contact { display: none; }
+@media (max-width: 650px) {
+  .mobile-contact:not([hidden]) { position: fixed; z-index: 80; inset: auto 0 0; display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom)); background: var(--color-header); backdrop-filter: blur(15px); border-top: var(--border-rule); }
+  .mobile-contact > span { font-family: var(--serif); font-size: 1.5rem; line-height: 1; }
+  .mobile-contact .button { min-height: 48px; padding: 12px var(--space-sm); gap: var(--space-sm); font-size: var(--fs-small); }
+  body:has(.menu-open) .mobile-contact { visibility: hidden; }
+  html:has(.mobile-contact:not([hidden])) { scroll-padding-bottom: 100px; }
+}
