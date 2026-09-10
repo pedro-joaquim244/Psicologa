@@ -6,7 +6,7 @@
 .faq-item h3 { font-family: var(--sans); }
 .faq-item button { display: flex; align-items: center; gap: var(--space-md); width: 100%; border: 0; background: transparent; text-align: left; padding: var(--space-md) 0; font-size: var(--fs-body); line-height: 1.7; transition: color var(--duration-hover); }
 .faq-number { flex-shrink: 0; font-family: var(--serif); font-size: 1.4rem; color: var(--muted); }
-.faq-plus { margin-left: auto; color: var(--forest); font-size: 1.1rem; flex-shrink: 0; transition: transform 300ms var(--ease-editorial); }
+.faq-plus { display: grid; place-items: center; width: 24px; height: 24px; margin-left: auto; margin-right: 6px; color: var(--forest); font-size: 1.1rem; flex-shrink: 0; transition: transform 300ms var(--ease-editorial); }
 .faq-item.is-open .faq-plus { transform: rotate(45deg); }
 .faq-answer p { padding: 0 var(--space-md) var(--space-lg) 46px; color: var(--muted); font-size: var(--fs-body); line-height: 1.85; }
 .faq-item button:hover { color: var(--color-sage-ink); }

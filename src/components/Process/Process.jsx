@@ -1,3 +1,6 @@
+import SectionLabel from '../Shared/SectionLabel';
+import '../../styles/process.css';
+
 export default function Process() {
   return (
     <section id="processo" className="process-section page-container" aria-labelledby="process-title">
@@ -7,5 +10,3 @@ export default function Process() {
     </section>
   );
 }
-import SectionLabel from '../Shared/SectionLabel';
-import '../../styles/process.css';
