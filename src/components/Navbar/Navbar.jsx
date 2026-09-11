@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { site } from '../../config/site';
 import ArrowLink from '../Shared/ArrowLink';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import '../../styles/navbar.css';
 
 const links = [['Início', 'inicio'], ['Sobre', 'sobre'], ['Abordagem', 'abordagem'], ['Atendimento', 'atendimento'], ['FAQ', 'faq']];
 
 export default function Navbar() {
+  const { isAuthenticated, isProfessional, logout } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState('inicio');
@@ -14,16 +17,18 @@ export default function Navbar() {
 
   useEffect(() => {
     let frame;
-    const sections = [...links.map(([, id]) => id), 'contato'].map((id) => document.getElementById(id)).filter(Boolean);
+    const sections = [...links.map(([, id]) => id), 'agendamento', 'contato'].map((id) => document.getElementById(id)).filter(Boolean);
     const update = () => {
       frame = undefined;
+      const header = headerRef.current;
+      if (!header) return;
       setScrolled(window.scrollY > 24);
-      const threshold = headerRef.current.offsetHeight + 80;
+      const threshold = header.offsetHeight + 80;
       const current = sections.filter((section) => section.getBoundingClientRect().top <= threshold).at(-1);
       setActive(current?.id || 'inicio');
       const distance = document.documentElement.scrollHeight - window.innerHeight;
       const progress = distance > 0 ? Math.max(0, Math.min(1, window.scrollY / distance)) : 0;
-      headerRef.current.style.setProperty('--reading-progress', progress);
+      header.style.setProperty('--reading-progress', progress);
     };
     const schedule = () => { if (frame === undefined) frame = requestAnimationFrame(update); };
     update();
@@ -42,7 +47,7 @@ export default function Navbar() {
       if (event.key === 'Escape') { setOpen(false); toggleRef.current?.focus(); }
     };
     const onOutside = (event) => { if (!headerRef.current?.contains(event.target)) setOpen(false); };
-    const desktop = window.matchMedia('(min-width: 1024px)');
+    const desktop = window.matchMedia('(min-width: 1200px)');
     const onResize = () => { if (desktop.matches) setOpen(false); };
     document.addEventListener('keydown', onKey);
     document.addEventListener('pointerdown', onOutside);
@@ -67,7 +72,11 @@ export default function Navbar() {
         </button>
         <nav id="main-navigation" className={`main-navigation ${open ? 'is-open' : ''}`} aria-label="Navegação principal">
           {links.map(([label, id]) => <a key={id} href={`#${id}`} aria-current={active === id ? 'location' : undefined} onClick={() => setOpen(false)}>{label}</a>)}
-          <ArrowLink className="header-cta" aria-current={active === 'contato' ? 'location' : undefined} onClick={() => setOpen(false)}>Agendar consulta</ArrowLink>
+          <ArrowLink className="header-cta" aria-current={['agendamento', 'contato'].includes(active) ? 'location' : undefined} onClick={() => setOpen(false)}>Agendar consulta</ArrowLink>
+          {!isAuthenticated ? <Link to="/login" onClick={() => setOpen(false)}>Entrar</Link> : <>
+            {isProfessional && <Link to="/adm/agenda" onClick={() => setOpen(false)}>Minha agenda</Link>}
+            <button className="header-logout" type="button" onClick={() => { logout(); setOpen(false); }}>Sair</button>
+          </>}
         </nav>
       </div>
       <span className="reading-progress" aria-hidden="true" />

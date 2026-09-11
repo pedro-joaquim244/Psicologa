@@ -7,7 +7,7 @@ export default function MobileContact() {
 
   useEffect(() => {
     const hero = document.getElementById('inicio');
-    const contact = document.getElementById('contato');
+    const contact = document.getElementById('agendamento');
     const mobile = window.matchMedia('(max-width: 650px)');
     const update = () => setVisible(mobile.matches && hero.getBoundingClientRect().bottom <= 0 && contact.getBoundingClientRect().top > window.innerHeight + 96);
     const observer = new IntersectionObserver(update, { rootMargin: '0px 0px 96px 0px' });
@@ -21,7 +21,7 @@ export default function MobileContact() {
   return (
     <aside className="mobile-contact" aria-label="Agendamento rápido" hidden={!visible}>
       <span>Um tempo<br /><em>para você.</em></span>
-      <ArrowLink href="#contato" className="button button-dark" aria-label="Escolher atendimento e agendar">Agendar conversa</ArrowLink>
+      <ArrowLink href="#agendamento" className="button button-dark" aria-label="Escolher atendimento e agendar">Agendar conversa</ArrowLink>
     </aside>
   );
 }

@@ -2,5 +2,10 @@ node_modules/
 dist/
 test-results/
 playwright-report/
+
 *.local
 *.local.log
+
+.env
+.env.*
+!.env.example

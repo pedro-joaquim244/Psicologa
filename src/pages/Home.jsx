@@ -16,6 +16,7 @@ import EditorialMarquee from '../components/EditorialMarquee/EditorialMarquee';
 import Credentials from '../components/Credentials/Credentials';
 import Journey from '../components/Journey/Journey';
 import Reflection from '../components/Reflection/Reflection';
+import Scheduling from '../components/Scheduling/Scheduling';
 import { gsap, ScrollTrigger, useScrollScene } from '../lib/motion';
 
 function animatePage({ desktop, reduced }, root) {
@@ -62,7 +63,7 @@ export default function Home() {
       <main id="conteudo" tabIndex={-1}>
         <Hero /><Process /><EditorialMarquee /><About /><Credentials />
         <Approach /><Journey /><Reflection /><Services /><Immersive />
-        <Audience /><Manifesto /><FAQ /><CTA />
+        <Audience /><Manifesto /><FAQ /><Scheduling /><CTA />
       </main>
       <Footer /><MobileContact />
     </div>

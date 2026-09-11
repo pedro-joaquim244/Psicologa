@@ -44,7 +44,7 @@ test('navegação acompanha saltos entre seções e ignora âncoras inválidas',
   await page.evaluate(() => document.fonts.ready);
   for (const id of ['atendimento', 'faq', 'sobre', 'contato', 'inicio']) {
     await page.locator(`#${id}`).evaluate((element) => window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top - 100, behavior: 'instant' }));
-    await expect(page.locator(`#main-navigation a[href="#${id}"]`)).toHaveAttribute('aria-current', 'location');
+    await expect(page.locator(`#main-navigation a[href="#${id === 'contato' ? 'agendamento' : id}"]`)).toHaveAttribute('aria-current', 'location');
     await expect(page.locator('#main-navigation [aria-current]')).toHaveCount(1);
   }
   expect(errors).toEqual([]);
@@ -62,7 +62,7 @@ test('agendamento móvel é contextual e menu cabe na tela em paisagem', async (
   await page.keyboard.press('Escape');
   await expect(bar).toBeVisible();
   await bar.getByRole('link').click();
-  await expect(page).toHaveURL(/#contato$/);
+  await expect(page).toHaveURL(/#agendamento$/);
   await expect(bar).toBeHidden();
   await page.setViewportSize({ width: 740, height: 360 });
   await page.getByRole('button', { name: 'Abrir menu' }).click();

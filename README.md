@@ -1,6 +1,6 @@
-# Helena Martins — landing page de psicologia
+# Helena Martins — Psicologia & Escuta
 
-Landing page editorial em React + Vite, com Bootstrap para grid e Bootstrap Icons. Desenvolvida dentro do projeto existente, em JSX, com treze seções, uma transição tipográfica e animações GSAP + ScrollTrigger.
+Landing page editorial e área administrativa em React + Vite. O projeto usa Cormorant Garamond e Manrope, Bootstrap Icons e animações GSAP com ScrollTrigger.
 
 ## Executar
 
@@ -9,140 +9,129 @@ npm install
 npm run dev
 ```
 
-Para gerar a versão de produção:
+O frontend fica em `http://localhost:5173`. A API deve estar ativa em `http://localhost:3333`.
+
+O Vite mantém essa origem com `strictPort`. O backend atual autoriza `http://localhost:5173` no CORS; usar `127.0.0.1` ou outra porta exige ajustar `FRONTEND_URL` no ambiente do backend. O comando `preview` serve para conferir o build; para testar contra a API real, use a origem autorizada.
+
+Para gerar e conferir a versão de produção:
 
 ```sh
 npm run build
 npm run preview
 ```
 
-## Personalizar
+## Área administrativa
 
-- `src/config/site.js`: nome, CRP, cidade, número de WhatsApp (país + DDD + número, somente dígitos), e-mail, Instagram, caminhos e descrições das fotografias.
-- `src/styles/global.css`: paleta, tipografia, espaçamentos e estilos compartilhados.
-- `src/components/`: textos e conteúdo de cada seção; cada componente principal tem seu CSS em `src/styles/`.
-- `index.html`: título, descrição e importação de Cormorant Garamond e Manrope pelo Google Fonts.
-- `public/favicon.svg`: monograma do site.
+- `/adm/login`: autenticação da psicóloga;
+- `/adm/agenda`: agenda protegida, resumo, filtros e ações de confirmar, concluir e cancelar.
 
-Nome, CRP, retrato e informações profissionais são demonstrativos. O WhatsApp usa o número fictício solicitado, o e-mail usa `example.com` e o Instagram aponta para a página inicial do serviço. Substitua esses dados, ajuste as informações de atendimento e utilize um retrato autorizado da profissional antes de publicar. Não há formulário, armazenamento de dados ou analytics.
+O link discreto **Área profissional** fica na linha inferior do rodapé existente. As credenciais de desenvolvimento fornecidas são `psicologa@email.com` e `123456`.
 
-## Seções e organização
+## Agendamento público
 
-`App.jsx` carrega apenas `pages/Home.jsx`. A Home preserva Navbar, Hero, Process, About, Approach, Services, Immersive, Audience, Manifesto, FAQ, CTA, Footer e MobileContact. A expansão acrescenta EditorialMarquee, Credentials, Journey e Reflection. Os oito arquivos vazios de componentes/estilos antigos sem uso foram removidos.
+A seção `#agendamento` fica entre o FAQ e o contato final. Os CTAs do hero, menu e atalho mobile levam ao mesmo calendário. Links explicitamente destinados ao WhatsApp continuam abrindo o WhatsApp.
 
-O ponto de entrada existente `src/Main.jsx` foi mantido, incluindo sua capitalização. `index.html` referencia esse caminho explicitamente, também em sistemas que diferenciam maiúsculas de minúsculas.
+1. Clique em **Agendar uma conversa** e selecione uma data.
+2. Escolha um horário retornado por `GET /api/horarios?data=AAAA-MM-DD`.
+3. Entre ou crie uma conta de paciente e confirme o código recebido por e-mail. Nome, WhatsApp e e-mail vêm da conta. Escolha Online ou Presencial.
+4. Confira o resumo e clique em **Confirmar agendamento**.
+5. A reserva usa `POST /api/agendamentos`, com JWT de paciente confirmado por e-mail. O sucesso limpa as seleções e atualiza a disponibilidade. Um conflito `409` atualiza os horários e mantém os dados digitados.
+6. Entre pela **Área profissional**, localize a reserva em `/adm/agenda`, confirme, conclua ou cancele e use **Sair** para encerrar a sessão.
 
-## Scroll e acessibilidade
+A landing não consulta nem exibe a lista de pacientes. Os dados básicos da própria conta ficam na sessão do navegador.
 
-- Hero com pin e expansão por `transform: scale()`, texto em movimento e timeline ligada ao scroll com `scrub`.
-- Abordagem com coluna sticky, três etapas e troca de fotografia e indicador por ScrollTrigger.
-- Fotografia panorâmica com margens reveladas por `clip-path`, zoom suave e texto em sequência.
-- Retrato e fotografia secundária com movimentos distintos, reveals por clip-path em direções diferentes e textos agrupados por composição.
-- Transição com tipografia gigante em movimento horizontal, sem animação infinita.
-- Percurso SVG desenhado com stroke-dashoffset, com geometria horizontal no desktop e vertical no celular.
-- Seção de reflexão com passagem de creme para azul, botânica vetorial nas bordas e parallax sutil.
-- Selo circular SVG com texto no contorno e rotação ligada ao scroll, presente no hero e no contato.
-- `src/lib/motion.js` registra ScrollTrigger e oferece o hook que cria `gsap.context()` e executa `ctx.revert()` na desmontagem.
-- `gsap.matchMedia()` distingue desktop, tablet e celular e respeita `prefers-reduced-motion`. Pin só é usado a partir de 1024 × 650 pixels, sem redução de movimento. Tablets recebem parallax moderado; celulares têm imagens reorganizadas, percurso vertical e scroll natural.
-- Menu com `aria-expanded`, Escape, fechamento ao navegar e retorno de foco; FAQ por teclado; link para pular ao conteúdo; imagens com texto alternativo.
-- O scroll nativo é preservado. Não há biblioteca de smooth scrolling ou captura da roda do mouse.
+O token e os dados básicos do usuário ficam em `localStorage`, nas chaves `psicologa_token` e `psicologa_usuario`. A senha nunca é armazenada. Todas as requisições administrativas enviam o JWT no cabeçalho `Authorization`; uma resposta `401` limpa a sessão e retorna ao login.
 
-O vídeo mencionado no briefing não estava disponível nos anexos recebidos. As animações seguem a descrição textual fornecida.
+A URL da API é centralizada em `src/services/api.js`. Para apontar para outro endereço, copie `.env.example` para `.env.local` e altere:
 
-## Fotografias temporárias
+```env
+VITE_API_URL=http://localhost:3333
+```
 
-As imagens foram baixadas do Unsplash para `public/images/` para não depender de URLs externas em cada visita:
+## Confirmação de e-mail
 
-| Arquivo | Origem |
-| --- | --- |
-| consultorio.jpg | https://images.unsplash.com/photo-1600210492486-724fe5c67fb0 |
-| retrato.jpg | https://images.unsplash.com/photo-1580489944761-15a19d654956 |
-| interior.jpg | https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85 |
-| natureza.jpg | https://images.unsplash.com/photo-1441974231531-c6227db76b6e |
+O cadastro de paciente e cada login (paciente ou profissional) exigem senha e um código enviado ao e-mail da conta. A resposta inicial não contém JWT; a sessão só é criada após confirmar o código. A data `email_verificado_em` fica registrada no banco para uso em futuras notificações. Isso confirma o acesso ao endereço naquele momento; não implementa o envio dessas notificações.
 
-Fontes são carregadas do Google Fonts, com fallbacks locais definidos no CSS.
+No backend, instale as dependências com `npm install` e execute `npm run migrate` antes de iniciar a API. A migração é aditiva e pode ser repetida: cria a tabela de desafios e acrescenta a data de verificação às contas existentes. Sessões antigas precisam de novo login.
 
-## Verificação no navegador
+Adicione ao `backend/.env` as variáveis de `backend/.env.example`: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_FROM`. Use um remetente autorizado pelo provedor. A integração usa [SMTP com Nodemailer](https://nodemailer.com/smtp), com TLS na porta 465 e STARTTLS nas demais (587 por padrão). Reinicie o backend após configurar. Nunca use variáveis `VITE_` para essas credenciais.
+
+Sem SMTP configurado, o envio retorna erro e o acesso permanece bloqueado. Se o cadastro já tiver sido criado antes de uma falha de envio, a tela orienta a tentar novamente pelo login.
+
+Os códigos têm seis dígitos, valem por 10 minutos e são de uso único. O reenvio pode ocorrer após 60 segundos e invalida o código anterior. Há limite de cinco erros e cinco envios por conta em uma janela de 15 minutos, persistido no MySQL, além do limite de requisições por IP no processo da API. O banco guarda um HMAC do código, nunca o código em texto. A validação e o consumo usam transação e bloqueio da conta para evitar reutilização simultânea.
+
+As rotas `POST /api/pacientes/verificar-email` e `/api/auth/verificar-email` recebem `{ desafio, codigo }`. As rotas correspondentes `/reenviar-codigo` recebem `{ desafio }`. O desafio é temporário e fica apenas em memória na tela; recarregar a página exige reiniciar o login.
+
+Para verificar o backend, execute `npm test` dentro de `backend/`, com o MySQL configurado e a migração aplicada. Os testes usam tabelas temporárias na conexão e entrega de e-mail simulada, sem alterar contas reais nem enviar mensagens. A interface é coberta por `tests/email-verification.spec.js` e pelos fluxos de cadastro, login e reserva.
+
+## Estrutura
+
+- `src/pages/Home.jsx`: landing page.
+- `src/components/Scheduling/`: calendário, formulário e fluxo público.
+- `src/utils/scheduling.js`: datas e validação do agendamento.
+- `src/styles/scheduling.css`: composição editorial do calendário e formulário.
+- `src/pages/admin/`: login e agenda administrativa.
+- `src/components/admin/`: marca, filtros, resumo, consultas, modal e estados de interface.
+- `src/context/AuthContext.jsx`: sessão e autenticação.
+- `src/services/`: cliente HTTP e armazenamento local.
+- `src/config/site.js`: dados da profissional, contato e imagens.
+- `src/styles/global.css`: tokens de cor, tipografia, espaçamento e transições.
+- `src/styles/admin.css`: layout responsivo da área administrativa.
+- `src/lib/motion.js`: integração GSAP/ScrollTrigger com limpeza na desmontagem.
+
+## Design e acessibilidade
+
+A área administrativa reutiliza a mesma identidade da landing: fundo creme, verde profundo, detalhe floral, linhas finas, títulos em Cormorant Garamond e controles em Manrope. A agenda usa linhas editoriais responsivas em vez de tabelas largas.
+
+O projeto inclui navegação por teclado, estados de foco, modal com foco preso e retorno ao acionador, mensagens acessíveis, alternativa para movimento reduzido e layouts testados entre 320 e 1920 pixels.
+
+## Testes
 
 ```sh
 npm run build
 npm run test:e2e
 ```
 
-Os testes Playwright usam o Microsoft Edge instalado no Windows. Para outro ambiente, instale Chromium com `npx playwright install chromium` e configure `PLAYWRIGHT_CHANNEL=chromium` ao executar os testes.
+Os testes Playwright cobrem a landing e a área administrativa em desktop, celular e movimento reduzido. São verificados login, proteção de rota, persistência e expiração da sessão, filtros, ações, modal, ausência de rolagem horizontal, imagens, menu, FAQ, âncoras e animações.
 
-São verificados desktop, celular e redução de movimento: imagens, ausência de overflow horizontal, FAQ, teclado, menu, âncoras, links de contato, pin, expansão da imagem, troca de etapas e limpeza ao redimensionar. Capturas ficam em `test-results/`.
+Para executar apenas a verificação de leitura contra a API local real no PowerShell:
 
-Dependências acrescentadas: `gsap` e `@playwright/test` (desenvolvimento). React, Vite, Bootstrap, Bootstrap Icons e o plugin React já estavam presentes.
+```powershell
+$env:REAL_API='1'; npx playwright test tests/admin.spec.js -g "integração de leitura" --project=desktop
+```
 
-## Arquivos criados e alterados
+Esse teste exige `REAL_ADMIN_TOKEN` de uma sessão confirmada por e-mail e lista os agendamentos sem alterar status. Obtenha o token fazendo login normalmente em uma conta de teste. Os demais testes administrativos simulam a API.
 
-Criados:
+O teste completo com a API real é opcional:
 
-- `index.html`, `vite.config.js`, `.gitignore`, `README.md`.
-- `src/config/site.js` e `src/lib/motion.js`.
-- `src/components/Shared/ArrowLink.jsx`.
-- `src/components/Process/Process.jsx`, `About/About.jsx`, `Approach/Approach.jsx`, `Services/Services.jsx`, `Immersive/Immersive.jsx`, `Audience/Audience.jsx`, `Manifesto/Manifesto.jsx`, `FAQ/FAQ.jsx` (todos dentro de `src/components/`).
-- `src/styles/about.css`, `approach.css`, `services.css`, `manifesto.css`, `faq.css`, `cta.css` (todos dentro de `src/styles/`).
-- `public/favicon.svg` e as quatro fotografias de `public/images/`.
-- `playwright.config.js` e `tests/landing.spec.js`.
+```powershell
+$env:REAL_BOOKING='1'; npx playwright test tests/scheduling-live.spec.js --project=desktop
+```
 
-Alterados:
+Ele exige `REAL_ADMIN_TOKEN` e `REAL_PATIENT_TOKEN` de contas de teste já confirmadas por e-mail. Use um paciente dedicado, identificado pelo nome como teste. Verifica reserva, disponibilidade, confirmação e saída do painel, e cancela apenas a reserva criada ao terminar. Requer um horário livre nos próximos 14 dias. O registro cancelado permanece no histórico. A suíte normal simula a entrega do código e cobre cadastro, login, conflito, erro, lista vazia, validação, teclado e respostas fora de ordem. Não existe código fixo nem bypass de verificação na API real.
 
-- `src/pages/Home.jsx`.
-- `src/components/Navbar/Navbar.jsx`, `Hero/Hero.jsx`, `CTA/CTA.jsx`, `Footer/Footer.jsx`.
-- `src/styles/global.css`, `navbar.css`, `hero.css`, `footer.css`.
-- `package.json` e `package-lock.json`.
+## Publicação no GitHub Pages
 
-`src/App.jsx` e `src/Main.jsx` foram reutilizados sem alterações.
+```sh
+npm run build:pages
+npm run deploy
+```
 
-## Melhorias de layout e interação
+`build:pages` usa a base `/Psicologa/` e cria `dist/404.html`, permitindo abrir diretamente rotas como `/Psicologa/adm/login` no GitHub Pages.
 
-- Textos de leitura com escala fluida de 15 a 17 px, links maiores e alvos de toque com pelo menos 44 px nas navegações principais.
-- Menu mobile com rolagem interna e altura limitada à tela, incluindo uso em paisagem.
-- Seção ativa recalculada ao rolar e redimensionar; linha discreta no header indica o avanço na página.
-- Composição sticky da abordagem ajustada para notebooks com pouca altura disponível.
-- Contato com escolha entre online, presencial e conversa inicial. A opção prepara uma mensagem correspondente no WhatsApp; a pessoa revisa e envia a mensagem no próprio aplicativo. Nenhuma mensagem é enviada automaticamente.
-- Atalho inferior de agendamento somente no celular, após o hero e antes da seção de contato. Fica oculto enquanto o menu está aberto.
-- FAQ navegável por setas, Home e End, além de Enter/Espaço. A abertura atualiza as posições das animações seguintes.
-- Âncoras com codificação inválida são ignoradas sem interromper a página.
+Depois desse build, `node scripts/check-pages.mjs` verifica a landing, assets e rotas administrativas em um servidor estático local que reproduz o fallback `404.html` do Pages. Para voltar à suíte padrão, gere novamente `npm run build`.
 
-Novos arquivos desta revisão: `src/components/MobileContact/MobileContact.jsx`, `src/styles/mobile-contact.css` e `tests/improvements.spec.js`. Nenhuma dependência adicional foi necessária.
+Para a integração funcionar na publicação, hospede a API em HTTPS e defina `VITE_API_URL` com esse endereço **antes do build**. Configure `FRONTEND_URL` no backend com a origem do site, por exemplo `https://seu-usuario.github.io` (sem `/Psicologa/`). GitHub Pages hospeda o frontend estático; `localhost:3333` serve apenas ao desenvolvimento local. Nenhum segredo do backend deve ser colocado em variáveis `VITE_`.
 
-## Direção visual: um caderno de escuta
+## Personalização antes da publicação
 
-O design system fica no início de `src/styles/global.css`. Cores são referenciadas por variáveis em todas as folhas de estilo, assim como fontes, hierarquia, espaçamentos, linhas e transições.
+Nome, CRP, retrato e contatos presentes na landing são demonstrativos. Atualize `src/config/site.js`, os textos dos componentes e as fotografias de `public/images/` com dados e imagens autorizados antes de publicar.
 
-| Elemento | Definição |
-| --- | --- |
-| Títulos, números e frases | Cormorant Garamond, com itálicos pontuais |
-| Texto, navegação e controles | Manrope |
-| Creme | `#F3F1EA` |
-| Superfície secundária | `#E8E7DF` |
-| Verde profundo | `#25352F` |
-| Verde suave | `#89988A` |
-| Azul de pausa | `#CCDCE0` |
-| Detalhe floral | `#A86775` |
-| Grid | 1400 px máximos; margens de 32–80 px no desktop e 20 px no celular |
+## Dependências principais
 
-Os tokens `--fs-display-xl`, `--fs-display`, `--fs-heading`, `--fs-body`, `--fs-small` e `--fs-label` definem a escala. `--space-section` e `--space-impact` criam ritmos diferentes para conteúdo e pausas. `--border-rule` e `--ease-editorial` mantêm as mesmas linhas e comportamento de interação.
-
-## Componentes da expansão editorial
-
-Criados:
-
-- `Shared/SectionLabel.jsx`: numeração, traço e label recorrentes.
-- `Shared/FloralMark.jsx`, `Shared/Botanical.jsx`, `Shared/CircularBadge.jsx`: ilustrações SVG originais e selo reutilizável. São decorativos e não entram na navegação assistiva.
-- `EditorialMarquee/EditorialMarquee.jsx`: transição horizontal “Escutar · compreender · continuar”.
-- `Credentials/Credentials.jsx`: informações profissionais em linha; coluna no celular.
-- `Journey/Journey.jsx`: percurso orgânico do processo.
-- `Reflection/Reflection.jsx`: frase central em azul suave.
-- `styles/process.css`, `styles/journey.css`, `styles/reflection.css` e `tests/editorial.spec.js`.
-
-Atualizados: Hero, Process, About, Approach, Services, Immersive, Audience, Manifesto, FAQ, CTA, Footer, Home e o hook `lib/motion.js`. As folhas de estilo existentes, incluindo Navbar e MobileContact, passaram a usar o mesmo sistema. `index.html`, `config/site.js` e o favicon também foram ajustados.
-
-A escolha de atendimento, links de WhatsApp, menu, indicador de leitura e navegação por teclado continuam funcionando. As linhas de atendimento trocam a fotografia pelo hover ou foco; o “+” do FAQ gira para “×”. Não foi criado cursor personalizado porque as fotografias são ilustrativas.
-
-Nenhuma dependência foi adicionada nesta expansão. O build passa e os testes cobrem as novas seções e efeitos, além das funcionalidades anteriores. A auditoria no Vite com React StrictMode encontrou 26 ScrollTriggers no desktop, zero com redução de movimento e os mesmos 26 após três ciclos, sem acúmulo.
-#   P s i c o l o g a  
- 
+- `react` e `react-dom`;
+- `react-router-dom` para as rotas pública e administrativas;
+- `gsap` para animações;
+- `bootstrap` e `bootstrap-icons`;
+- `vite` e `@vitejs/plugin-react`;
+- `@playwright/test` para testes no navegador.

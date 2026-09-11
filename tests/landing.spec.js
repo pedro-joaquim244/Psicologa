@@ -7,7 +7,7 @@ test('conteúdo, imagens, FAQ, contatos e ausência de overflow', async ({ page 
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator('h1')).toHaveText('Um espaço parase escutar commais calma.');
-  await expect(page.locator('main > section, main > .pin-spacer > section')).toHaveCount(13);
+  await expect(page.locator('main > section, main > .pin-spacer > section')).toHaveCount(14);
   await page.screenshot({ path: testInfo.outputPath('hero.png') });
 
   for (const section of await page.locator('main > section, main > .pin-spacer > section').all()) {

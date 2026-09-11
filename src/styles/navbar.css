@@ -16,9 +16,10 @@
 .header-cta:hover, .header-cta[aria-current] { background: var(--paper-dark); border-color: var(--forest); }
 .reading-progress { position: absolute; inset: auto 0 -1px; height: 2px; background: var(--sage); transform: scaleX(var(--reading-progress, 0)); transform-origin: left; pointer-events: none; }
 .menu-toggle { display: none; }
+.header-logout { min-height: 44px; border: 0; background: transparent; padding: 0; text-align: left; font-size: var(--fs-small); }
 .skip-link { position: absolute; top: 8px; left: var(--space-md); background: var(--forest); color: var(--paper); padding: 12px 20px; z-index: 101; clip-path: inset(100%); }
 .skip-link:focus { clip-path: none; color: var(--paper); }
-@media (max-width: 1023px) {
+@media (max-width: 1199px) {
   .header-inner { min-height: 85px; }
   .brand-copy > span { font-size: 1.3rem; }
   .menu-toggle { display: flex; flex-direction: column; justify-content: center; gap: 7px; width: 44px; height: 44px; background: none; border: 0; padding: 10px; }
