@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import AdminBrand from "../../components/admin/AdminBrand";
 import CircularBadge from "../../components/Shared/CircularBadge";
@@ -7,8 +7,10 @@ import { useAuth } from "../../context/AuthContext";
 import { resendEmailCode } from '../../services/api';
 import { images } from "../../config/site";
 import "../../styles/admin.css";
+import "../../styles/login.css";
 
 export default function LoginAdmin({ audience = 'profissional', registering = false }) {
+  const pageRef = useRef(null);
   const { isProfessional, isPatient, login, register, confirmEmail } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,7 +28,27 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
   const [time, setTime] = useState(Date.now());
   const resendSeconds = challenge ? Math.max(0, Math.ceil((challenge.reenviarEm - time) / 1000)) : 0;
   const expired = challenge && time >= challenge.expiraEm;
-  const destination = patient ? '/#agendamento' : '/adm/agenda';
+  const patientReturn = ['/minhas-consultas', '/minha-conta'].includes(location.state?.from) ? location.state.from : '/#agendamento';
+  const destination = patient ? patientReturn : '/adm/agenda';
+
+  useLayoutEffect(() => {
+    const viewport = window.visualViewport;
+    const fitViewport = () => {
+      pageRef.current?.style.setProperty('--login-height', `${viewport?.height ?? window.innerHeight}px`);
+      pageRef.current?.style.setProperty('--login-offset', `${viewport?.offsetTop ?? 0}px`);
+    };
+    document.documentElement.classList.add('auth-screen');
+    fitViewport();
+    viewport?.addEventListener('resize', fitViewport);
+    viewport?.addEventListener('scroll', fitViewport);
+    window.addEventListener('resize', fitViewport);
+    return () => {
+      document.documentElement.classList.remove('auth-screen');
+      viewport?.removeEventListener('resize', fitViewport);
+      viewport?.removeEventListener('scroll', fitViewport);
+      window.removeEventListener('resize', fitViewport);
+    };
+  }, []);
 
   useEffect(() => {
     if (!challenge) return;
@@ -92,7 +114,7 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
   };
 
   return (
-    <main className="admin-page login-page">
+    <main ref={pageRef} className={`admin-page login-page${registering && !challenge ? ' is-registering' : ''}${challenge ? ' is-verifying' : ''}`}>
       <section className="login-visual" aria-hidden="true" style={{ "--login-image": `url("${images.hero.src}")` }}>
         <div className="login-visual-shade" />
         <div className="login-visual-copy"><span className="admin-kicker">{patient ? 'SEU ESPAÇO DE CUIDADO' : 'ESPAÇO PROFISSIONAL'}</span><p>{patient ? <>Um tempo para<br /><em>olhar para você.</em></> : <>Organizar também<br />é uma forma de <em>cuidar.</em></>}</p></div>
@@ -107,8 +129,8 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
           </nav>
           <div className="login-heading">
             <FloralMark /><p className="admin-kicker">{patient ? 'ÁREA DO PACIENTE' : 'ÁREA ADMINISTRATIVA'}</p>
-            <h1 id="login-title">{challenge ? <>Confirme seu<br /><em>e-mail.</em></> : registering ? <>Crie sua<br /><em>conta.</em></> : patient ? <>Seu próximo<br /><em>passo.</em></> : <>Bem-vinda<br /><em>de volta.</em></>}</h1>
-            <p>{challenge ? <>Enviamos um código de seis dígitos para <strong className="verification-email">{challenge.email}</strong>. Ele vale por 10 minutos.</> : registering ? 'Cadastre seus dados para reservar uma consulta. Vamos confirmar seu e-mail por código.' : patient ? 'Entre na sua conta para agendar seu atendimento. Enviaremos um código ao seu e-mail para confirmar o acesso.' : 'Entre com seus dados profissionais. Um código enviado ao seu e-mail confirmará o acesso à agenda.'}</p>
+            <h1 id="login-title">{challenge ? <>Confirme seu <em>e-mail.</em></> : registering ? <>Crie sua <em>conta.</em></> : patient ? <>Seu próximo <em>passo.</em></> : <>Bem-vinda <em>de volta.</em></>}</h1>
+            <p>{challenge ? <>Código enviado para <strong className="verification-email">{challenge.email}</strong>. Válido por 10 minutos.</> : registering ? 'Preencha seus dados para agendar. Confirmaremos seu e-mail por código.' : patient ? 'Entre para agendar. Confirmaremos seu acesso com um código por e-mail.' : 'Acesse sua agenda com senha e um código de confirmação por e-mail.'}</p>
           </div>
           {challenge ? <form className="login-form" onSubmit={handleVerify} noValidate>
             {error && <div className="login-error" role="alert"><span>{error}</span></div>}
@@ -129,7 +151,7 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
               <label className="admin-field"><span>WhatsApp com DDD</span><span className="field-control"><input type="tel" name="telefone" autoComplete="tel" required maxLength={24} value={phone} onChange={(event) => setPhone(event.target.value)} disabled={submitting} placeholder="(16) 99999-9999" /></span></label>
             </>}
             <label className="admin-field"><span>E-mail</span><span className="field-control"><i className="bi bi-envelope" aria-hidden="true" /><input type="email" name="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" inputMode="email" required maxLength={255} placeholder="seu@email.com" disabled={submitting} /></span></label>
-            <div className="admin-field"><label htmlFor="admin-password">Senha</label><span className="field-control"><i className="bi bi-lock" aria-hidden="true" /><input id="admin-password" type={showPassword ? "text" : "password"} name="senha" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={registering ? 'new-password' : 'current-password'} required placeholder={registering ? 'Pelo menos 8 caracteres' : 'Digite sua senha'} disabled={submitting} /><button type="button" className="password-toggle" onClick={() => setShowPassword((current) => !current)} aria-pressed={showPassword} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}><i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} aria-hidden="true" /></button></span></div>
+            <div className="admin-field"><div className="password-label"><label htmlFor="admin-password">Senha</label>{registering && <span id="password-requirement">8+ caracteres</span>}</div><span className="field-control"><i className="bi bi-lock" aria-hidden="true" /><input id="admin-password" aria-describedby={registering ? "password-requirement" : undefined} type={showPassword ? "text" : "password"} name="senha" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={registering ? 'new-password' : 'current-password'} required placeholder={registering ? 'Crie sua senha' : 'Digite sua senha'} disabled={submitting} /><button type="button" className="password-toggle" onClick={() => setShowPassword((current) => !current)} aria-pressed={showPassword} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}><i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} aria-hidden="true" /></button></span></div>
             <button className="admin-button login-submit" type="submit" disabled={submitting || !email.trim() || !password}><span>{submitting ? (registering ? 'Criando conta…' : 'Entrando…') : registering ? 'Criar conta' : 'Entrar'}</span><i className="bi bi-arrow-up-right" aria-hidden="true" /></button>
           </form>
           {patient && <p className="login-switch">{registering ? 'Já tem uma conta?' : 'É sua primeira consulta?'} <Link to={registering ? '/login' : '/cadastro'} state={location.state}>{registering ? 'Entrar' : 'Criar conta'}</Link></p>}

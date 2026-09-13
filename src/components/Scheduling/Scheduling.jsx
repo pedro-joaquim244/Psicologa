@@ -42,7 +42,8 @@ export default function Scheduling() {
       if (Math.abs(entry.contentRect.height - lastHeight) < 1) return;
       lastHeight = entry.contentRect.height;
       clearTimeout(timer);
-      timer = setTimeout(() => ScrollTrigger.refresh(), 100);
+      // Aguarda a rolagem terminar para não interromper a navegação por âncoras.
+      timer = setTimeout(() => ScrollTrigger.refresh(true), 100);
     });
     observer.observe(rootRef.current);
     const previous = resumeBooking.current;

@@ -3,6 +3,7 @@ import { images, site } from '../../config/site';
 import { gsap, useScrollScene } from '../../lib/motion';
 import ArrowLink from '../Shared/ArrowLink';
 import CircularBadge from '../Shared/CircularBadge';
+import Photo from '../Shared/Photo';
 import FloralMark from '../Shared/FloralMark';
 import '../../styles/hero.css';
 
@@ -21,12 +22,14 @@ function animateHero({ desktop, reduced }, root) {
   timeline.to('.hero-copy', { y: -75, autoAlpha: 0, duration: 0.45, ease: 'none' }, 0)
     .to('.hero-meta, .photo-note, .hero-side-note, .hero-badge', { autoAlpha: 0, duration: 0.3 }, 0)
     .to(photo, {
-      x: () => root.clientWidth / 2 - photo.offsetLeft - photo.offsetWidth / 2,
-      y: () => root.clientHeight / 2 - photo.offsetTop - photo.offsetHeight / 2,
-      scale: () => Math.max(root.clientWidth / photo.offsetWidth, root.clientHeight / photo.offsetHeight) * 1.015,
+      x: () => -photo.offsetLeft,
+      y: () => -photo.offsetTop,
+      width: () => root.clientWidth,
+      height: () => root.clientHeight,
+      borderRadius: 0,
       duration: 1, ease: 'none',
     }, 0.08)
-    .fromTo('.hero-photo img', { scale: 1.12 }, { scale: 1, duration: 1, ease: 'none' }, 0.08)
+    .fromTo('.hero-photo img', { scale: 1.025 }, { scale: 1, duration: 1, ease: 'none' }, 0.08)
     .fromTo('.hero-photo-shade', { opacity: 0 }, { opacity: 0.3, duration: 0.5 }, 0.65)
     .fromTo('.hero-photo-message', { opacity: 0, y: 25 }, { opacity: 1, y: 0, duration: 0.3 }, 1.08);
 }
@@ -43,7 +46,7 @@ export default function Hero() {
         <div className="hero-actions"><ArrowLink className="button button-dark">Agendar uma conversa</ArrowLink><a className="text-link" href="#sobre">Conheça meu trabalho <i className="bi bi-arrow-down" aria-hidden="true" /></a></div>
       </div>
       <figure className="hero-photo">
-        <img src={images.hero.src} alt={images.hero.alt} fetchPriority="high" width="1600" height="1200" />
+        <Photo image={images.hero} loading="eager" fetchPriority="high" sizes="100vw" />
         <div className="hero-photo-shade" />
       </figure>
       <CircularBadge className="hero-badge" />

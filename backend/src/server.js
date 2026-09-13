@@ -8,6 +8,7 @@ import horariosRoutes from "./routes/horarios.routes.js";
 import agendamentosRoutes from "./routes/agendamentos.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import pacientesRoutes from './routes/pacientes.routes.js';
+import usuarioRoutes from './routes/usuario.routes.js';
 
 const app = express();
 
@@ -66,6 +67,7 @@ app.get("/api/teste-banco", async (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use('/api/pacientes', pacientesRoutes);
+app.use('/api/usuario', usuarioRoutes);
 
 app.use("/api/horarios", horariosRoutes);
 

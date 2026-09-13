@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { images, site } from '../../config/site';
+import Photo from '../Shared/Photo';
 import ArrowLink from '../Shared/ArrowLink';
 import SectionLabel from '../Shared/SectionLabel';
 import { gsap, useScrollScene } from '../../lib/motion';
@@ -23,9 +24,9 @@ export default function About() {
       <div className="page-container row align-items-center g-0 justify-content-between">
         <div className="col-lg-5 about-visual">
           <span className="portrait-number" aria-hidden="true">03</span><span className="portrait-side-label eyebrow">PSICÓLOGA CLÍNICA</span>
-          <figure className="portrait-frame"><img src={images.portrait.src} alt={images.portrait.alt} style={{ objectPosition: images.portrait.position }} width="800" height="1000" loading="lazy" /></figure>
+          <figure className="portrait-frame"><Photo image={images.portrait} sizes="(max-width: 650px) 90vw, (max-width: 1600px) 40vw, 580px" /></figure>
           <div className="portrait-caption"><span>{site.shortName}</span><span className="eyebrow">PRESENÇA ANTES DE TUDO.</span></div>
-          <figure className="about-detail"><div className="about-detail-photo"><img src={images.detail.src} alt={images.detail.alt} width="600" height="700" loading="lazy" /></div><figcaption>Há espaço para a sua história.</figcaption></figure>
+          <figure className="about-detail"><div className="about-detail-photo"><Photo image={images.detail} sizes="(max-width: 650px) 60vw, 24vw" /></div><figcaption>Há espaço para a sua história.</figcaption></figure>
         </div>
         <div className="col-lg-6 about-copy"><SectionLabel number="03" data-reveal>SOBRE MIM</SectionLabel><h2 id="about-title" className="display-title" data-reveal>Escutar também<br />é uma forma<br />de <em>cuidar.</em></h2><div className="about-body" data-reveal><p>Sou psicóloga clínica e meu trabalho é oferecer um espaço acolhedor para que você possa compreender suas emoções, experiências e relações com mais profundidade.</p><p>Acredito em uma psicoterapia construída através do vínculo, da escuta e do respeito à singularidade de cada pessoa.</p></div><div className="about-credentials" data-reveal><span>{site.profession}<small>{site.crp}</small></span><span>Presencial e online<small>{site.location}</small></span></div><ArrowLink className="text-link" href="#abordagem">Um pouco sobre o meu olhar</ArrowLink></div>
       </div>

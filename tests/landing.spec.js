@@ -15,6 +15,12 @@ test('conteúdo, imagens, FAQ, contatos e ausência de overflow', async ({ page 
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
   }
   await expect.poll(() => page.locator('img').evaluateAll((images) => images.every((image) => image.complete && image.naturalWidth > 0))).toBe(true);
+  const photoSources = await page.locator('main img').evaluateAll((photos) => photos.map(photo => photo.src));
+  expect(new Set(photoSources).size, 'Cada fotografia deve ter um lugar próprio na página').toBe(photoSources.length);
+  for (const photo of await page.locator('main img').all()) {
+    await expect(photo).toHaveAttribute('srcset', /\.webp \d+w/);
+    await expect(photo).toHaveAttribute('sizes', /vw/);
+  }
 
   const onlineQuestion = page.getByRole('button', { name: /O atendimento pode ser online/ });
   await onlineQuestion.click();
@@ -75,7 +81,18 @@ test('scroll adapta pin, expansão e etapas à preferência de movimento', async
     await page.locator('.approach-step').nth(index).evaluate((element) => window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top - window.innerHeight * .35, behavior: 'instant' }));
     await expect(page.locator('.approach-current')).toHaveText(`0${index + 1}`);
     await expect(page.locator('.approach-step').nth(index)).toHaveClass(/is-active/);
+    await expect(page.locator('.approach-image').nth(index)).toHaveClass(/is-active/);
+    await expect(page.locator('.approach-indicator').nth(index)).toHaveAttribute('aria-current', 'step');
   }
+
+  const firstStep = page.getByRole('button', { name: 'Ver etapa 01: Escuta' });
+  await firstStep.focus();
+  await page.keyboard.press('Enter');
+  await expect(firstStep).toHaveAttribute('aria-current', 'step');
+  await expect(page.locator('.approach-current')).toHaveText('01');
+  await page.getByRole('button', { name: 'Ver etapa 03: Construção' }).click();
+  await expect(page.locator('.approach-current')).toHaveText('03');
+  await expect(page.locator('.approach-image-label')).toHaveText('POSSIBILIDADES QUE FAZEM SENTIDO PARA VOCÊ.');
 
   await page.setViewportSize({ width: 768, height: 1024 });
   await expect(page.locator('.pin-spacer')).toHaveCount(0);

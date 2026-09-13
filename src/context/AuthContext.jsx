@@ -1,16 +1,25 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useLocation } from 'react-router-dom';
 import { AUTH_EXPIRED_EVENT, loginAdmin, loginPatient, registerPatient, verifyEmail } from "../services/api";
 import { clearStoredSession, getStoredSession, saveStoredSession } from "../services/authStorage";
 
 const AuthContext = createContext(null);
+const readSessions = () => ({ paciente: getStoredSession('paciente'), profissional: getStoredSession('profissional') });
 
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(getStoredSession);
+  const [sessions, setSessions] = useState(readSessions);
+  const { pathname } = useLocation();
+  const audience = pathname.startsWith('/adm') || (pathname === '/' && !sessions.paciente.token && sessions.profissional.token) ? 'profissional' : 'paciente';
+  const session = sessions[audience];
 
   useEffect(() => {
-    const expire = () => setSession({ token: null, user: null });
+    const expire = () => setSessions(readSessions());
     window.addEventListener(AUTH_EXPIRED_EVENT, expire);
-    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, expire);
+    window.addEventListener('storage', expire);
+    return () => {
+      window.removeEventListener(AUTH_EXPIRED_EVENT, expire);
+      window.removeEventListener('storage', expire);
+    };
   }, []);
 
   const value = useMemo(() => ({
@@ -32,13 +41,13 @@ export function AuthProvider({ children }) {
       const data = await verifyEmail(details, audience);
       if (!data?.token || !data?.usuario?.email_verificado) throw new Error('A API retornou uma sessão inválida.');
       saveStoredSession(data.token, data.usuario);
-      setSession({ token: data.token, user: data.usuario });
+      setSessions(readSessions());
     },
     logout() {
-      clearStoredSession();
-      setSession({ token: null, user: null });
+      clearStoredSession(audience);
+      setSessions(readSessions());
     },
-  }), [session]);
+  }), [session, audience]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

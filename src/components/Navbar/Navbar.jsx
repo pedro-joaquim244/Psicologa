@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { site } from '../../config/site';
-import ArrowLink from '../Shared/ArrowLink';
+import SectionLink from '../Shared/SectionLink';
+import UserMenu from '../UserMenu/UserMenu';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import '../../styles/navbar.css';
@@ -8,7 +9,7 @@ import '../../styles/navbar.css';
 const links = [['Início', 'inicio'], ['Sobre', 'sobre'], ['Abordagem', 'abordagem'], ['Atendimento', 'atendimento'], ['FAQ', 'faq']];
 
 export default function Navbar() {
-  const { isAuthenticated, isProfessional, logout } = useAuth();
+  const { isAuthenticated, isProfessional, isPatient, logout } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState('inicio');
@@ -25,7 +26,7 @@ export default function Navbar() {
       setScrolled(window.scrollY > 24);
       const threshold = header.offsetHeight + 80;
       const current = sections.filter((section) => section.getBoundingClientRect().top <= threshold).at(-1);
-      setActive(current?.id || 'inicio');
+      setActive(current?.id || (sections.length ? 'inicio' : null));
       const distance = document.documentElement.scrollHeight - window.innerHeight;
       const progress = distance > 0 ? Math.max(0, Math.min(1, window.scrollY / distance)) : 0;
       header.style.setProperty('--reading-progress', progress);
@@ -63,17 +64,17 @@ export default function Navbar() {
     <header ref={headerRef} className={`site-header ${scrolled ? 'is-scrolled' : ''} ${open ? 'menu-open' : ''}`}>
       <a href="#conteudo" className="skip-link">Pular para o conteúdo</a>
       <div className="page-container header-inner">
-        <a href="#inicio" className="brand" aria-label={`${site.name}, início`} onClick={() => setOpen(false)}>
+        <SectionLink section="inicio" className="brand" aria-label={`${site.name}, início`} onClick={() => setOpen(false)}>
           <span className="brand-monogram" aria-hidden="true">h<span>m</span></span>
           <span className="brand-copy"><span>{site.name}</span><small>PSICOLOGIA & ESCUTA</small></span>
-        </a>
+        </SectionLink>
         <button ref={toggleRef} className="menu-toggle" type="button" aria-expanded={open} aria-controls="main-navigation" aria-label={open ? 'Fechar menu' : 'Abrir menu'} onClick={() => setOpen(!open)}>
           <span /> <span />
         </button>
         <nav id="main-navigation" className={`main-navigation ${open ? 'is-open' : ''}`} aria-label="Navegação principal">
-          {links.map(([label, id]) => <a key={id} href={`#${id}`} aria-current={active === id ? 'location' : undefined} onClick={() => setOpen(false)}>{label}</a>)}
-          <ArrowLink className="header-cta" aria-current={['agendamento', 'contato'].includes(active) ? 'location' : undefined} onClick={() => setOpen(false)}>Agendar consulta</ArrowLink>
-          {!isAuthenticated ? <Link to="/login" onClick={() => setOpen(false)}>Entrar</Link> : <>
+          {links.map(([label, id]) => <SectionLink key={id} section={id} aria-current={active === id ? 'location' : undefined} onClick={() => setOpen(false)}>{label}</SectionLink>)}
+          <SectionLink section="agendamento" className="arrow-link header-cta" aria-current={['agendamento', 'contato'].includes(active) ? 'location' : undefined} onClick={() => setOpen(false)}><span>Agendar consulta</span><i className="bi bi-arrow-up-right" aria-hidden="true" /></SectionLink>
+          {!isAuthenticated ? <Link to="/login" onClick={() => setOpen(false)}>Entrar</Link> : isPatient ? <UserMenu onNavigate={() => setOpen(false)} /> : <>
             {isProfessional && <Link to="/adm/agenda" onClick={() => setOpen(false)}>Minha agenda</Link>}
             <button className="header-logout" type="button" onClick={() => { logout(); setOpen(false); }}>Sair</button>
           </>}

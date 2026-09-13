@@ -75,3 +75,8 @@
   .booking-calendar { max-width: 480px; }
   .booking-success { padding: var(--space-md); }
 }
+@media (max-width: 420px) {
+  .booking-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .booking-login-gate .button { width: 100%; justify-content: center; margin-right: 0; }
+  .booking-login-gate .text-link { width: 100%; justify-content: center; }
+}

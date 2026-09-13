@@ -1,14 +1,15 @@
 .about-section { background: var(--paper-dark); padding-bottom: calc(var(--space-section) + 60px); }
 .about-visual { position: relative; width: 41%; padding-bottom: 90px; }
 .portrait-frame { aspect-ratio: 4 / 5; overflow: hidden; background: var(--sage); }
-.portrait-frame img { filter: saturate(.6); }
+.portrait-frame { border-radius: 20px; }
+.portrait-frame img { filter: none; }
 .portrait-number { position: absolute; left: -22px; top: -58px; z-index: 2; font-family: var(--serif); font-size: clamp(5rem, 9vw, 9rem); line-height: 1; color: var(--paper); text-shadow: 1px 0 var(--color-border); }
 .portrait-side-label { position: absolute; top: 12%; left: -26px; writing-mode: vertical-rl; transform: rotate(180deg); color: var(--muted); }
 .portrait-caption { display: flex; justify-content: space-between; align-items: start; gap: var(--space-sm); margin-top: var(--space-sm); }
 .portrait-caption > span:first-child { font-family: var(--serif); font-size: 1.5rem; font-style: italic; }
 .portrait-caption > span:last-child { max-width: 105px; font-size: .5rem; text-align: right; }
 .about-detail { position: absolute; right: -12%; bottom: -30px; width: 47%; z-index: 2; }
-.about-detail-photo { aspect-ratio: 4 / 5; overflow: hidden; border: 7px solid var(--paper-dark); background: var(--paper-dark); }
+.about-detail-photo { aspect-ratio: 4 / 5; overflow: hidden; border: 8px solid var(--paper-dark); border-radius: 16px; background: var(--paper-dark); }
 .about-detail figcaption { margin-top: var(--space-xs); font-family: var(--serif); font-size: 1.1rem; font-style: italic; text-align: center; }
 .about-copy { width: 49%; padding-right: var(--space-sm); }
 .about-copy .eyebrow { margin-bottom: var(--space-lg); }
@@ -34,7 +35,7 @@
   .portrait-caption { margin-left: 16px; flex-direction: row; align-items: center; }
   .portrait-caption > span:last-child { max-width: 100px; text-align: right; }
   .about-detail { position: relative; width: 60%; margin: var(--space-lg) 0 0 auto; right: auto; bottom: auto; }
-  .about-detail-photo { aspect-ratio: 5 / 4; border: 0; }
+  .about-detail-photo { aspect-ratio: 4 / 5; border: 0; }
   .about-copy { margin-top: var(--space-xl); }
   .about-copy .display-title { font-size: var(--fs-display); }
   .about-credentials { flex-direction: row; flex-wrap: wrap; gap: var(--space-md); }

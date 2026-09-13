@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { images } from '../../config/site';
 import { gsap, useScrollScene } from '../../lib/motion';
+import Photo from '../Shared/Photo';
 import SectionLabel from '../Shared/SectionLabel';
 
 function animateImage({ desktop, reduced }, root) {
@@ -18,7 +19,7 @@ export default function Immersive() {
   useScrollScene(ref, animateImage);
   return (
     <section ref={ref} className="immersive-section" aria-label="Uma pausa para respirar">
-      <div className="immersive-photo"><img src={images.nature.src} alt={images.nature.alt} width="1800" height="1200" loading="lazy" /><div className="immersive-shade" /><div className="immersive-copy"><SectionLabel number="08">PERMITA-SE UMA PAUSA</SectionLabel><p className="immersive-words"><span>Respirar.</span><span><em>Compreender.</em></span><span>Continuar.</span></p><span className="immersive-note">UM PASSO DE CADA VEZ.</span></div></div>
+      <div className="immersive-photo"><Photo image={images.nature} sizes="(max-width: 650px) 1100px, 100vw" /><div className="immersive-shade" /><div className="immersive-copy"><SectionLabel number="08">PERMITA-SE UMA PAUSA</SectionLabel><p className="immersive-words"><span>Respirar.</span><span><em>Compreender.</em></span><span>Continuar.</span></p><span className="immersive-note">UM PASSO DE CADA VEZ.</span></div></div>
     </section>
   );
 }

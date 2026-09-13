@@ -1,0 +1,123 @@
+/* A autenticação ocupa a área visível, inclusive com o teclado virtual aberto. */
+html.auth-screen, .auth-screen body, .auth-screen #root { height: 100%; overflow: clip; overscroll-behavior: none; }
+.login-page {
+  position: fixed;
+  inset: var(--login-offset, 0px) 0 auto;
+  height: var(--login-height, 100dvh);
+  min-height: 0;
+  overflow: clip;
+  container-type: size;
+  display: grid;
+  grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+}
+.login-visual { min-height: 0; height: 100%; }
+.login-panel {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: max(24px, env(safe-area-inset-top)) clamp(24px, 5vw, 80px) max(16px, env(safe-area-inset-bottom));
+}
+.login-top { gap: 16px; }
+.login-top .admin-brand { min-width: 0; gap: 12px; }
+.login-top .admin-brand-copy strong { font-size: 1.25rem; }
+.login-top .back-to-site { flex-shrink: 0; gap: 8px; font-size: .75rem; }
+.login-content { width: min(100%, 480px); min-height: 0; padding: 0; margin: auto; }
+.login-audience { gap: 32px; margin-bottom: 24px; }
+.login-audience a { min-height: 44px; font-size: .875rem; }
+.login-heading > .floral-mark { width: 28px; height: 28px; }
+.login-heading > .admin-kicker { padding-right: 40px; }
+.login-heading h1 { margin-top: 12px; font-size: clamp(2.5rem, 4.3vw, 4rem); line-height: 1; }
+.login-heading > p:last-child { max-width: 440px; margin-top: 12px; font-size: .875rem; line-height: 1.5; }
+.login-form { margin-top: 24px; gap: 16px; }
+.login-form .admin-field { gap: 4px; font-size: .6875rem; line-height: 1.4; }
+.login-form .field-control { min-height: 44px; }
+.login-form .field-control input { height: 44px; font-size: 16px; }
+.login-form .password-toggle { width: 44px; height: 44px; flex: 0 0 44px; }
+.password-label { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; }
+.password-label > span { font-size: .625rem; letter-spacing: 0; text-transform: none; }
+.login-submit { min-height: 48px; margin-top: 0; padding: 12px 20px; }
+.login-error { padding: 8px 12px; gap: 8px; font-size: .8125rem; line-height: 1.4; overflow-wrap: anywhere; }
+.login-switch { margin-top: 8px; font-size: .8125rem; line-height: 1.4; }
+.login-switch a { min-height: 44px; }
+.login-footer { margin: 0; padding-top: 12px; font-size: .6875rem; line-height: 1.4; }
+.is-registering .login-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.is-registering .login-form > :nth-child(n + 3), .is-registering .login-form > .login-error { grid-column: 1 / -1; }
+/* Classes independentes da presença de mensagens de validação. */
+.is-registering .login-form > .admin-field:has([name="nome"]),
+.is-registering .login-form > .admin-field:has([name="telefone"]) { grid-column: auto; }
+.login-form .verification-notice { font-size: .8125rem; line-height: 1.4; }
+.is-verifying .login-form { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.is-verifying .login-form > :not(.verification-link) { grid-column: 1 / -1; }
+.login-form .verification-link { min-height: 44px; padding: 4px; font-size: .8125rem; line-height: 1.4; }
+
+@media (max-width: 1000px) {
+  .login-page { grid-template-columns: minmax(0, 1fr); }
+  .login-visual { display: none; }
+  .login-panel { padding-inline: max(20px, env(safe-area-inset-left), env(safe-area-inset-right)); }
+  .login-top { width: min(100%, 640px); margin-inline: auto; }
+  .login-heading h1 { font-size: 3rem; }
+  .login-footer { width: min(100%, 640px); margin-inline: auto; }
+}
+@media (max-width: 380px) {
+  .login-top .admin-monogram { width: 36px; font-size: 2.5rem; }
+  .login-top .admin-monogram span { font-size: 2rem; }
+  .login-top .admin-brand-copy strong { font-size: 1rem; }
+  .login-top .admin-brand-copy small { font-size: .4rem; letter-spacing: .12em; }
+  .login-top .back-to-site { font-size: .6875rem; gap: 4px; }
+}
+@container (max-height: 740px) {
+  .login-panel { gap: 12px; padding-block: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+  .login-audience { margin-bottom: 16px; }
+  .login-heading h1 { font-size: 2.5rem; margin-top: 8px; }
+  .login-heading > p:last-child { margin-top: 8px; }
+  .login-form { margin-top: 16px; gap: 12px; }
+  .login-footer { padding-top: 8px; }
+}
+@container (max-height: 600px) {
+  .login-panel { gap: 8px; padding-block: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-bottom)); }
+  .login-heading > .floral-mark, .login-heading > .admin-kicker { display: none; }
+  .login-heading h1 { font-size: 2rem; margin: 0; }
+  .login-heading > p:last-child { font-size: .8125rem; margin-top: 4px; line-height: 1.4; }
+  .login-audience { margin-bottom: 8px; }
+  .login-form { margin-top: 12px; gap: 8px; }
+  .is-registering .login-form > .admin-field { grid-column: auto; }
+  .login-form .field-control > .bi { display: none; }
+  .login-switch { margin-top: 0; }
+  .login-top .admin-monogram { font-size: 2rem; width: 32px; padding-bottom: 4px; }
+  .login-top .admin-monogram span { font-size: 1.75rem; }
+  .login-top .admin-brand-copy small { display: none; }
+  .login-footer { font-size: .625rem; padding-top: 4px; }
+}
+/* Em paisagem, o texto e os campos dividem a largura disponível. */
+@container (min-width: 600px) and (max-height: 540px) {
+  .login-panel { padding-inline: 24px; }
+  .login-top, .login-footer { width: 100%; }
+  .login-content { width: min(100%, 960px); display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); column-gap: 32px; align-items: start; }
+  .login-audience { grid-column: 1; grid-row: 1; }
+  .login-heading { grid-column: 1; grid-row: 2; }
+  .login-switch { grid-column: 1; grid-row: 3; }
+  .login-form { grid-column: 2; grid-row: 1 / span 3; margin-top: 0; }
+  .login-heading h1 { font-size: 2rem; }
+}
+@container (max-width: 599px) and (max-height: 480px) {
+  .login-top .back-to-site, .login-audience a, .login-switch a { min-height: 32px; }
+  .login-audience { gap: 24px; margin-bottom: 4px; }
+  .login-heading h1 { font-size: 1.75rem; }
+  .login-heading > p:last-child { font-size: .75rem; line-height: 1.35; }
+  .login-form, .is-verifying .login-form { margin-top: 8px; gap: 4px; }
+  .login-form .admin-field { gap: 2px; }
+  .login-submit { min-height: 44px; padding-block: 8px; }
+  .login-form .verification-notice, .login-form .verification-link { font-size: .75rem; }
+  .login-footer { font-size: .5625rem; }
+  .login-page:not(.is-verifying) .login-content:has(.login-error) .login-heading > p:last-child { display: none; }
+}
+@container (max-width: 599px) and (max-height: 400px) {
+  .login-panel { grid-template-rows: minmax(0, 1fr) auto; }
+  .login-top { position: absolute; top: 8px; right: 20px; width: auto; }
+  .login-top .admin-brand { display: none; }
+  .login-audience { padding-right: 88px; gap: 12px; }
+  .login-audience a { font-size: .75rem; }
+}

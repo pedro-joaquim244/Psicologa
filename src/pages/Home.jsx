@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar/Navbar';
 import Hero from '../components/Hero/Hero';
 import Process from '../components/Process/Process';
@@ -39,6 +40,7 @@ function animatePage({ desktop, reduced }, root) {
 
 export default function Home() {
   const ref = useRef(null);
+  const { hash } = useLocation();
   useScrollScene(ref, animatePage);
   useEffect(() => {
     let disposed = false;
@@ -56,7 +58,7 @@ export default function Home() {
     document.fonts.ready.then(() => { if (!disposed) frame = requestAnimationFrame(restoreAnchor); });
     window.addEventListener('load', refresh);
     return () => { disposed = true; cancelAnimationFrame(frame); window.removeEventListener('load', refresh); };
-  }, []);
+  }, [hash]);
   return (
     <div ref={ref}>
       <Navbar />

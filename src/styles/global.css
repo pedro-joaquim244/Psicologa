@@ -101,7 +101,7 @@ em { font-weight: 400; }
 .immersive-section { height: min(850px, 95svh); min-height: 530px; position: relative; }
 .immersive-photo { width: 100%; height: 100%; overflow: hidden; position: relative; }
 .immersive-photo img { position: absolute; inset: 0; }
-.immersive-shade { position: absolute; inset: 0; background: var(--color-overlay); }
+.immersive-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgb(20 36 26 / 66%), rgb(20 36 26 / 12%)); }
 .immersive-copy { position: absolute; inset: 0; padding: var(--space-xl) max(var(--gutter), calc((100% - var(--container)) / 2)); display: flex; flex-direction: column; color: var(--color-on-dark); }
 .immersive-copy > .eyebrow { margin-bottom: var(--space-lg); }
 .immersive-words { font-family: var(--serif); font-size: var(--fs-display-xl); line-height: .98; letter-spacing: -.04em; }
@@ -109,11 +109,28 @@ em { font-weight: 400; }
 .immersive-note { margin-top: auto; font-size: var(--fs-label); letter-spacing: .16em; }
 .audience-section .eyebrow { margin-bottom: var(--space-lg); }
 .audience-description { margin-top: var(--space-lg); max-width: 360px; color: var(--muted); font-size: var(--fs-body); }
-.audience-list { list-style: none; padding: 0; margin: 0; border-top: var(--border-rule); }
-.audience-list li { display: flex; align-items: center; gap: var(--space-md); min-height: 72px; border-bottom: var(--border-rule); font-size: var(--fs-body); }
-.audience-number { font-family: var(--serif); font-size: 1.25rem; color: var(--muted); }
-.audience-mark { margin-left: auto; color: var(--color-sage-ink); font-size: 1.4rem; }
+.audience-list { --audience-number-width: 24px; --audience-gap: var(--space-md); list-style: none; padding: 0; margin: 0; border-top: var(--border-rule); }
+.audience-item { border-bottom: var(--border-rule); transition: border-color var(--duration-hover); }
+.audience-trigger { display: flex; align-items: center; gap: var(--audience-gap); width: 100%; min-height: 72px; padding: var(--space-sm) 0; border: 0; background: transparent; color: var(--ink); font-family: var(--sans); font-size: var(--fs-body); line-height: 1.5; text-align: left; cursor: pointer; transition: color var(--duration-hover); }
+.audience-trigger:focus-visible { outline: 2px solid var(--forest); outline-offset: -4px; }
+.audience-number { flex: 0 0 var(--audience-number-width); font-family: var(--serif); font-size: 1.25rem; color: var(--muted); transition: color var(--duration-hover); }
+.audience-topic { min-width: 0; }
+.audience-mark { position: relative; flex: 0 0 24px; height: 24px; margin-left: auto; color: var(--color-sage-ink); font-size: 1.4rem; line-height: 1; overflow: clip; }
+.audience-mark > span { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity var(--duration-hover), transform var(--duration-hover) var(--ease-editorial); }
+.audience-close { opacity: 0; transform: rotate(-45deg); }
+.audience-item.is-open { border-bottom-color: var(--color-sage-ink); }
+.audience-item.is-open .audience-trigger, .audience-item.is-open .audience-number { color: var(--color-sage-ink); }
+.audience-item.is-open .audience-arrow { opacity: 0; transform: translate(2px, -2px); }
+.audience-item.is-open .audience-close { opacity: 1; transform: rotate(0); }
+.audience-panel { height: 0; overflow: hidden; visibility: hidden; opacity: 0; }
+.audience-panel p { padding: 0 var(--space-md) var(--space-md) calc(var(--audience-number-width) + var(--audience-gap)); color: var(--muted); font-size: var(--fs-body); line-height: 1.75; opacity: 0; transform: translateY(4px); }
 .audience-footnote { margin-top: var(--space-md); color: var(--muted); max-width: 350px; font-size: var(--fs-small); }
+.audience-cta { margin-top: var(--space-xs); }
+@media (hover: hover) {
+  .audience-item:hover { border-bottom-color: var(--color-sage-ink); }
+  .audience-trigger:hover, .audience-trigger:hover .audience-number { color: var(--color-sage-ink); }
+  .audience-trigger:hover .audience-arrow { transform: translate(2px, -2px); }
+}
 
 @media (max-width: 1023px) {
   .audience-section .row > div { width: 100%; }
@@ -131,7 +148,8 @@ em { font-weight: 400; }
   .label-rule { width: 24px; flex-basis: 24px; }
   .immersive-section { height: 610px; min-height: 0; }
   .immersive-copy { padding-block: var(--space-xl) var(--space-lg); }
-  .audience-list li { gap: var(--space-sm); }
+  .audience-list { --audience-gap: var(--space-sm); }
+  .audience-panel p { padding-right: var(--space-sm); }
 }
 @media (max-width: 575px) { html { scroll-padding-top: 90px; } }
 @media (prefers-reduced-motion: reduce) {

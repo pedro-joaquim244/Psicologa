@@ -58,7 +58,7 @@ test('paciente cria conta, reserva e psicóloga confirma no painel', async ({ pa
   page.on('pageerror', (error) => errors.push(error.message));
   const requests = await setup(page, { authenticated: false });
   await page.goto('/');
-  await page.getByRole('link', { name: 'Agendar uma conversa', exact: true }).click();
+  await page.locator('#inicio').getByRole('link', { name: 'Agendar uma conversa', exact: true }).click();
   await expect(page).toHaveURL(/#agendamento$/);
   await page.locator(`[data-date="${selectedDate}"]`).click();
   await page.getByRole('button', { name: '09:00 até 09:50' }).click();

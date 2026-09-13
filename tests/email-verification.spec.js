@@ -20,12 +20,12 @@ test('só abre a sessão após o código; permite corrigir e reenviar', async ({
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Confirme seu e-mail.' })).toBeVisible();
   await expect(page.getByLabel('Código de verificação')).toBeFocused();
-  expect(await page.evaluate(() => localStorage.getItem('psicologa_token'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('paciente_token'))).toBeNull();
   await expect(page.getByRole('button', { name: /Reenviar código/ })).toBeDisabled();
   await page.getByLabel('Código de verificação').fill('111111');
   await page.getByRole('button', { name: 'Confirmar e entrar' }).click();
   await expect(page.getByRole('alert')).toContainText('Código incorreto');
-  expect(await page.evaluate(() => localStorage.getItem('psicologa_token'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('paciente_token'))).toBeNull();
   await page.clock.fastForward(61000);
   await page.getByRole('button', { name: 'Reenviar código', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Novo código enviado');
@@ -35,7 +35,7 @@ test('só abre a sessão após o código; permite corrigir e reenviar', async ({
   await page.getByLabel('Código de verificação').fill('012345');
   await page.getByRole('button', { name: 'Confirmar e entrar' }).click();
   await expect(page).toHaveURL(/#agendamento$/);
-  expect(await page.evaluate(() => localStorage.getItem('psicologa_token'))).toBe('verified-token');
+  expect(await page.evaluate(() => localStorage.getItem('paciente_token'))).toBe('verified-token');
 });
 
 test('expiração, falha de reenvio e volta ao login não criam sessão', async ({ page }) => {
@@ -55,5 +55,5 @@ test('expiração, falha de reenvio e volta ao login não criam sessão', async 
   await expect(page.getByRole('alert')).toContainText('Não foi possível enviar');
   await page.getByRole('button', { name: 'Voltar para o login' }).click();
   await expect(page.getByLabel('Senha', { exact: true })).toHaveValue('');
-  expect(await page.evaluate(() => localStorage.getItem('psicologa_token'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('paciente_token'))).toBeNull();
 });

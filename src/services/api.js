@@ -1,4 +1,4 @@
-import { clearStoredSession } from "./authStorage";
+import { clearSessionForToken } from "./authStorage";
 
 export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3333").replace(/\/$/, "");
 export const AUTH_EXPIRED_EVENT = "psicologa:auth-expired";
@@ -36,8 +36,8 @@ async function apiRequest(path, { token, body, headers, ...options } = {}) {
     : await response.text().catch(() => "");
 
   if (response.status === 401 && token) {
-    clearStoredSession();
-    window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
+    clearSessionForToken(token);
+    window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT, { detail: { token } }));
   }
 
   if (!response.ok) {
@@ -93,4 +93,20 @@ export function verifyEmail(details, audience) {
 
 export function resendEmailCode(desafio, audience) {
   return apiRequest(`/api/${audience === 'paciente' ? 'pacientes' : 'auth'}/reenviar-codigo`, { method: 'POST', body: { desafio } });
+}
+
+export async function listPatientAppointments(token, options = {}) {
+  const data = await apiRequest('/api/usuario/agendamentos', { method: 'GET', token, ...options });
+  if (!Array.isArray(data)) throw new ApiError('Não foi possível ler suas consultas. Tente novamente.');
+  return data;
+}
+
+export async function cancelPatientAppointment(id, token) {
+  const data = await apiRequest(`/api/usuario/agendamentos/${encodeURIComponent(id)}/cancelar`, { method: 'PATCH', token });
+  if (!data?.agendamento?.id || data.agendamento.status !== 'cancelado') throw new ApiError('Não foi possível confirmar o cancelamento. Tente novamente.');
+  return data.agendamento;
+}
+
+export function getPatientAccount(token, options = {}) {
+  return apiRequest('/api/pacientes/me', { method: 'GET', token, ...options });
 }

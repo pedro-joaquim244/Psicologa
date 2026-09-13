@@ -1,0 +1,79 @@
+.patient-page { padding-top: clamp(144px, 13vw, 200px); padding-bottom: var(--space-section); min-height: 78svh; }
+.patient-intro { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--space-xl); align-items: end; padding-bottom: var(--space-xl); }
+.patient-intro .section-label { margin-bottom: var(--space-md); color: var(--muted); }
+.patient-intro .display-title { font-size: clamp(3rem, 5.7vw, 5.6rem); }
+.patient-intro-note { max-width: 340px; justify-self: end; padding-bottom: var(--space-xs); }
+.patient-intro-note > p { color: var(--muted); margin-bottom: var(--space-md); }
+.patient-filters { display: flex; gap: var(--space-lg); border-block: var(--border-rule); }
+.patient-filters button { position: relative; display: flex; align-items: center; gap: var(--space-sm); min-height: 72px; border: 0; padding: 8px 0; background: transparent; color: var(--muted); font-size: var(--fs-small); cursor: pointer; }
+.patient-filters button::after { content: ''; position: absolute; inset: auto 0 -1px; height: 2px; background: var(--forest); transform: scaleX(0); transition: transform var(--duration-hover) var(--ease-editorial); }
+.patient-filters button[aria-pressed='true'] { color: var(--forest); }
+.patient-filters button[aria-pressed='true']::after { transform: scaleX(1); }
+.patient-filters button > span { font-family: var(--serif); font-size: 1.35rem; font-variant-numeric: lining-nums tabular-nums; }
+.patient-list-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-xs) var(--space-md); padding-top: var(--space-md); color: var(--muted); font-size: .75rem; }
+.patient-results { min-height: 260px; }
+.patient-group { margin-top: var(--space-lg); }
+.patient-group > h2 { color: var(--muted); margin-bottom: var(--space-sm); }
+.patient-appointment { border-bottom: var(--border-rule); }
+.patient-appointment-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 130px 150px; gap: var(--space-lg); align-items: center; padding-block: var(--space-lg); }
+.patient-date { display: flex; align-items: center; gap: 12px; color: var(--forest); font-variant-numeric: lining-nums tabular-nums; }
+.patient-date > span:first-child { font-family: var(--serif); font-size: 3.5rem; line-height: 1; letter-spacing: -.04em; }
+.patient-date > span:last-child { font-size: .75rem; line-height: 1.6; text-transform: uppercase; letter-spacing: .08em; }
+.patient-date small { display: block; color: var(--muted); font-size: .6875rem; }
+.patient-time { color: var(--muted); font-size: .8125rem; font-variant-numeric: tabular-nums; }
+.patient-appointment-copy h3 { margin-top: 4px; font-size: clamp(1.6rem, 2.4vw, 2.1rem); line-height: 1.15; }
+.patient-status { justify-self: start; border: 1px solid var(--line); padding: 4px 10px; font-size: .625rem; line-height: 1.6; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.patient-status.status-confirmado { background: color-mix(in srgb, var(--sage) 16%, transparent); border-color: color-mix(in srgb, var(--sage) 50%, transparent); color: var(--forest); }
+.patient-status.status-agendado { color: var(--color-sage-ink); }
+.patient-status.status-cancelado { color: #80514b; border-color: color-mix(in srgb, var(--color-floral) 32%, transparent); }
+.patient-details-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-height: 44px; border: 0; padding: 0; background: transparent; font-size: .8125rem; cursor: pointer; }
+.patient-details-trigger > span { font-family: var(--serif); font-size: 1.7rem; color: var(--color-sage-ink); }
+.patient-appointment-details { padding: var(--space-md) 0 var(--space-lg) 190px; border-top: var(--border-rule); }
+.patient-appointment-details:not([hidden]) { animation: patient-appear 300ms var(--ease-editorial); }
+.patient-appointment-details dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-md); margin: 0; }
+.patient-appointment-details dt, .patient-account dt { font-weight: 400; color: var(--muted); font-size: .75rem; margin-bottom: 4px; }
+.patient-appointment-details dd { font-size: .875rem; margin: 0; }
+.patient-detail-actions { display: flex; gap: var(--space-lg); margin-top: var(--space-md); }
+.patient-cancel-link { border: 0; padding: 8px 0; background: transparent; color: #80514b; font-size: .8125rem; min-height: 44px; cursor: pointer; text-decoration: underline; text-underline-offset: 5px; }
+.patient-state { padding-block: var(--space-xl); }
+.patient-state h2 { font-size: var(--fs-heading); line-height: 1.1; }
+.patient-state h2 em { color: var(--color-sage-ink); }
+.patient-state > p { color: var(--muted); margin-block: var(--space-sm); }
+.patient-state > .text-link { margin-top: var(--space-sm); }
+.patient-page button.text-link { border: 0; cursor: pointer; }
+.patient-error { color: #80514b; margin-top: var(--space-sm); }
+.patient-loading-rule { display: block; height: 1px; width: 64px; margin-bottom: var(--space-lg); background: var(--sage); animation: patient-pulse 1.2s ease-in-out infinite alternate; }
+.patient-account { margin: 0 0 var(--space-lg); border-top: var(--border-rule); }
+.patient-account > div { display: grid; grid-template-columns: 1fr 2fr; padding-block: var(--space-md); border-bottom: var(--border-rule); gap: var(--space-md); }
+.patient-account dd { margin: 0; overflow-wrap: anywhere; }
+@keyframes patient-appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes patient-pulse { from { opacity: .3; } to { opacity: 1; } }
+@media (max-width: 991px) {
+  .patient-intro { gap: var(--space-lg); }
+  .patient-appointment-row { grid-template-columns: 105px minmax(0, 1fr) 110px; gap: var(--space-md); }
+  .patient-details-trigger { grid-column: 2 / -1; justify-content: start; }
+  .patient-appointment-details { padding-left: 129px; }
+  .patient-appointment-details dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 599px) {
+  .patient-intro { grid-template-columns: 1fr; padding-bottom: var(--space-lg); }
+  .patient-intro-note { justify-self: start; max-width: 100%; }
+  .patient-intro .display-title { font-size: clamp(2.75rem, 11vw, 3.6rem); }
+  .patient-filters { gap: 0; justify-content: space-between; }
+  .patient-filters button { flex-direction: column; justify-content: center; gap: 0; font-size: .6875rem; min-height: 76px; }
+  .patient-appointment-row { grid-template-columns: 80px minmax(0, 1fr); gap: var(--space-sm); padding-block: var(--space-md); }
+  .patient-date { gap: 8px; }
+  .patient-date > span:first-child { font-size: 2.6rem; }
+  .patient-date > span:last-child { font-size: .625rem; }
+  .patient-date small { font-size: .5625rem; }
+  .patient-appointment-copy h3 { font-size: 1.6rem; }
+  .patient-status { grid-column: 2; }
+  .patient-details-trigger { grid-column: 2; margin-top: -4px; }
+  .patient-appointment-details { padding-left: 0; }
+  .patient-appointment-details dl { gap: var(--space-md) var(--space-sm); }
+  .patient-account > div { grid-template-columns: 1fr; gap: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .patient-appointment-details:not([hidden]), .patient-loading-rule { animation: none; }
+  .patient-filters button::after { transition: none; }
+}

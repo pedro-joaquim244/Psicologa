@@ -40,7 +40,15 @@ A seção `#agendamento` fica entre o FAQ e o contato final. Os CTAs do hero, me
 
 A landing não consulta nem exibe a lista de pacientes. Os dados básicos da própria conta ficam na sessão do navegador.
 
-O token e os dados básicos do usuário ficam em `localStorage`, nas chaves `psicologa_token` e `psicologa_usuario`. A senha nunca é armazenada. Todas as requisições administrativas enviam o JWT no cabeçalho `Authorization`; uma resposta `401` limpa a sessão e retorna ao login.
+O token e os dados básicos ficam em `localStorage`: `psicologa_token` / `psicologa_usuario` para a profissional e `paciente_token` / `paciente_usuario` para o paciente. A senha nunca é armazenada. As requisições privadas enviam o JWT em `Authorization`; uma resposta `401` remove somente a sessão correspondente ao token rejeitado. Sessões antigas de paciente são migradas automaticamente para suas próprias chaves.
+
+## Área do paciente
+
+No cabeçalho existente, clique no nome do paciente e em **Minhas consultas**. No celular, abra primeiro o menu principal. `/minhas-consultas` oferece filtros instantâneos, detalhes e cancelamento com confirmação; `/minha-conta` mostra os dados da própria conta. As duas páginas exigem login de paciente e preservam o destino após a confirmação por e-mail.
+
+`GET /api/usuario/agendamentos` e `PATCH /api/usuario/agendamentos/:id/cancelar` reutilizam os middlewares de JWT e validação da conta. Toda consulta SQL inclui `paciente_id = req.usuario.id`. O banco já possui essa chave estrangeira; novas reservas já a preenchem usando a conta autenticada. Registros antigos sem vínculo não são associados por nome ou e-mail.
+
+Não há migração nova nem dependência adicional. O cancelamento mantém a regra administrativa existente (qualquer status diferente de `cancelado`, sem prazo de antecedência), conserva o histórico e libera a disponibilidade conforme as regras atuais. Os detalhes não exibem links de videochamada inexistentes. Consulte [a entrega e o roteiro de testes](docs/area-paciente.md).
 
 A URL da API é centralizada em `src/services/api.js`. Para apontar para outro endereço, copie `.env.example` para `.env.local` e altere:
 

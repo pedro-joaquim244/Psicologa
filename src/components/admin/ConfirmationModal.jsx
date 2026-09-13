@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export default function ConfirmationModal({ appointment, busy, onClose, onConfirm }) {
+export default function ConfirmationModal({ appointment, busy, onClose, onConfirm, title, description, confirmLabel = 'Cancelar agendamento', error }) {
   const dialogRef = useRef(null);
   const backButtonRef = useRef(null);
   const lastActiveRef = useRef(null);
@@ -39,11 +39,12 @@ export default function ConfirmationModal({ appointment, busy, onClose, onConfir
       <div ref={dialogRef} className="admin-modal" tabIndex={-1} role="alertdialog" aria-modal="true" aria-labelledby="cancel-title" aria-describedby="cancel-description">
         <span className="modal-number" aria-hidden="true">×</span>
         <p className="admin-kicker">ALTERAR AGENDAMENTO</p>
-        <h2 id="cancel-title">Cancelar este<br /><em>agendamento?</em></h2>
-        <p id="cancel-description">O atendimento de <strong>{appointment.nome_cliente}</strong> será cancelado e este horário poderá ficar disponível novamente.</p>
+        <h2 id="cancel-title">{title || <>Cancelar este<br /><em>agendamento?</em></>}</h2>
+        <p id="cancel-description">{description || <>O atendimento de <strong>{appointment.nome_cliente}</strong> será cancelado e este horário poderá ficar disponível novamente.</>}</p>
+        {error && <p className="patient-error" role="alert">{error}</p>}
         <div className="modal-actions">
           <button ref={backButtonRef} type="button" className="admin-button secondary-button" onClick={onClose} disabled={busy}>Voltar</button>
-          <button type="button" className="admin-button danger-button" onClick={onConfirm} disabled={busy}>{busy ? "Cancelando…" : "Cancelar agendamento"}</button>
+          <button type="button" className="admin-button danger-button" onClick={onConfirm} disabled={busy}>{busy ? "Cancelando…" : confirmLabel}</button>
         </div>
       </div>
     </div>
