@@ -1,19 +1,9 @@
 import express from "express";
 import db from "../database.js";
 
+import { clinicNow, generateSlots, validDate, validId } from '../utils/scheduling.js';
 const router = express.Router();
-
-function horaParaMinutos(hora) {
-  const [h, m] = hora.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function minutosParaHora(minutos) {
-  const hora = Math.floor(minutos / 60);
-  const minuto = minutos % 60;
-
-  return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
-}
+router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 
 // =====================================================
 // LISTAR HORÁRIOS DISPONÍVEIS
@@ -25,21 +15,12 @@ router.get("/", async (req, res) => {
   try {
     const { data, profissional_id = 1 } = req.query;
 
-    if (!data) {
-      return res.status(400).json({
-        erro: "Informe uma data.",
-      });
+    if (!validDate(data) || !validId(profissional_id)) {
+      return res.status(400).json({ erro: 'Informe uma data e um profissional válidos.' });
     }
-
-    const dataJS = new Date(`${data}T12:00:00`);
-
-    if (Number.isNaN(dataJS.getTime())) {
-      return res.status(400).json({
-        erro: "Data inválida.",
-      });
-    }
-
-    const diaSemana = dataJS.getDay();
+    const now = clinicNow();
+    if (data < now.slice(0, 10)) return res.json({ data, horarios: [] });
+    const diaSemana = new Date(data + 'T12:00:00Z').getUTCDay();
 
     // Busca os horários de trabalho da psicóloga
     const [disponibilidades] = await db.query(
@@ -51,6 +32,7 @@ router.get("/", async (req, res) => {
         intervalo_minutos
       FROM disponibilidades
       WHERE profissional_id = ?
+        AND EXISTS (SELECT 1 FROM profissionais WHERE id = profissional_id AND ativo = 1)
         AND dia_semana = ?
         AND ativo = 1
       ORDER BY hora_inicio
@@ -73,10 +55,11 @@ router.get("/", async (req, res) => {
         fim
       FROM agendamentos
       WHERE profissional_id = ?
-        AND DATE(inicio) = ?
+        AND inicio < DATE_ADD(?, INTERVAL 1 DAY)
+        AND fim > CONCAT(?, ' 00:00:00')
         AND status IN ('agendado', 'confirmado')
       `,
-      [profissional_id, data]
+      [profissional_id, data, data]
     );
 
     // Busca horários bloqueados pela psicóloga
@@ -87,62 +70,27 @@ router.get("/", async (req, res) => {
         fim
       FROM bloqueios_agenda
       WHERE profissional_id = ?
-        AND inicio < CONCAT(?, ' 23:59:59')
+        AND inicio < DATE_ADD(?, INTERVAL 1 DAY)
         AND fim > CONCAT(?, ' 00:00:00')
       `,
       [profissional_id, data, data]
     );
 
-    const horarios = [];
-
-    for (const disponibilidade of disponibilidades) {
-      const inicio = horaParaMinutos(disponibilidade.hora_inicio);
-      const fim = horaParaMinutos(disponibilidade.hora_fim);
-
-      const duracao = Number(disponibilidade.duracao_minutos);
-      const intervalo = Number(disponibilidade.intervalo_minutos);
-
-      for (
-        let atual = inicio;
-        atual + duracao <= fim;
-        atual += duracao + intervalo
-      ) {
-        const horaInicio = minutosParaHora(atual);
-        const horaFim = minutosParaHora(atual + duracao);
-
-        const inicioCompleto = `${data} ${horaInicio}:00`;
-        const fimCompleto = `${data} ${horaFim}:00`;
-
-        const ocupado = agendamentos.some((agendamento) => {
-          return (
-            inicioCompleto < agendamento.fim &&
-            fimCompleto > agendamento.inicio
-          );
-        });
-
-        const bloqueado = bloqueios.some((bloqueio) => {
-          return inicioCompleto < bloqueio.fim && fimCompleto > bloqueio.inicio;
-        });
-
-        if (!ocupado && !bloqueado) {
-          horarios.push({
-            horario: horaInicio,
-            fim: horaFim,
-          });
-        }
-      }
-    }
+    const horarios = generateSlots(disponibilidades).filter((slot) => {
+      const inicio = data + ' ' + slot.horario + ':00';
+      const fim = data + ' ' + slot.fim + ':00';
+      return inicio > now && ![...agendamentos, ...bloqueios].some((item) => inicio < item.fim && fim > item.inicio);
+    });
 
     return res.json({
       data,
       horarios,
     });
   } catch (error) {
-    console.error("Erro ao buscar horários:", error);
+    console.error("Erro ao buscar horários:", error.code || error.name);
 
     return res.status(500).json({
       erro: "Erro ao buscar horários disponíveis.",
-      detalhe: error.message,
     });
   }
 });

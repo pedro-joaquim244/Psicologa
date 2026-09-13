@@ -55,10 +55,10 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(
 ::selection { color: var(--paper); background: var(--forest); }
 a { color: inherit; text-decoration: none; }
 a:hover { color: inherit; }
-button, input { font: inherit; color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 input { accent-color: var(--forest); }
-:where(a, button, input, [tabindex]):focus-visible { outline: 2px solid var(--forest); outline-offset: 5px; }
+:where(a, button, input, select, textarea, [tabindex]):focus-visible { outline: 2px solid var(--forest); outline-offset: 5px; }
 img { display: block; width: 100%; height: 100%; object-fit: cover; }
 figure, p { margin: 0; }
 h1, h2, h3 { font-family: var(--serif); font-weight: 400; margin: 0; }

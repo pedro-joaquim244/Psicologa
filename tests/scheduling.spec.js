@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const api = 'http://localhost:3333/api';
+const api = '**/api';
 const selectedDate = '2030-09-18';
 const slots = [{ horario: '09:00', fim: '09:50' }, { horario: '15:00', fim: '15:50' }];
 const user = { id: 1, nome: 'Dra. Helena Martins', tipo: 'psicologa' };

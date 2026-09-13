@@ -20,8 +20,8 @@ export default function ConfirmationModal({ appointment, busy, onClose, onConfir
       if (!focusable.length) { event.preventDefault(); dialog.focus(); return; }
       const first = focusable[0];
       const last = focusable.at(-1);
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog || !dialog.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
     };
     document.addEventListener("keydown", onKeyDown);
     document.body.classList.add("modal-open");

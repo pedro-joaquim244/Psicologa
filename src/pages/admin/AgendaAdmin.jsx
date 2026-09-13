@@ -30,6 +30,7 @@ export default function AgendaAdmin() {
   const [filters, setFilters] = useState(initialFilters);
   const [busy, setBusy] = useState({ id: null, action: null });
   const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelError, setCancelError] = useState('');
   const [toast, setToast] = useState(null);
   const actionPending = useRef(false);
 
@@ -54,7 +55,7 @@ export default function AgendaAdmin() {
   }, [loadAgenda]);
 
   useEffect(() => {
-    if (!toast) return undefined;
+    if (!toast || toast.tone === "error") return undefined;
     const timeout = window.setTimeout(() => setToast(null), 4500);
     return () => window.clearTimeout(timeout);
   }, [toast]);
@@ -82,6 +83,7 @@ export default function AgendaAdmin() {
     if (actionPending.current) return;
     actionPending.current = true;
     setBusy({ id: appointment.id, action });
+    setCancelError('');
     try {
       const response = await updateAppointmentStatus(appointment.id, action, token);
       const updated = normalizeUpdatedAppointment(response, appointment, action);
@@ -89,7 +91,9 @@ export default function AgendaAdmin() {
       setToast({ message: actionSuccess[action], tone: "success" });
       if (action === "cancelar") setCancelTarget(null);
     } catch (requestError) {
-      if (requestError.status !== 401) setToast({ message: requestError.message, tone: "error" });
+      if (action === 'cancelar') setCancelError(requestError.message);
+      if (requestError.status !== 401 && action !== 'cancelar') setToast({ message: requestError.message, tone: "error" });
+      if (requestError.status === 409) await loadAgenda();
     } finally {
       actionPending.current = false;
       setBusy({ id: null, action: null });
@@ -101,7 +105,7 @@ export default function AgendaAdmin() {
     navigate("/adm/login", { replace: true });
   };
 
-  const closeCancelModal = useCallback(() => setCancelTarget(null), []);
+  const closeCancelModal = useCallback(() => { setCancelTarget(null); setCancelError(''); }, []);
 
   return (
     <main className="admin-page agenda-page">
@@ -122,7 +126,7 @@ export default function AgendaAdmin() {
       </div>
 
       <footer className="admin-footer"><div className="admin-container"><span>HELENA MARTINS · PSICOLOGIA & ESCUTA</span><span>Sessão protegida por autenticação.</span></div></footer>
-      <ConfirmationModal appointment={cancelTarget} busy={busy.id === cancelTarget?.id && busy.action === "cancelar"} onClose={closeCancelModal} onConfirm={() => runAction(cancelTarget, "cancelar")} />
+      <ConfirmationModal error={cancelError} appointment={cancelTarget} busy={busy.id === cancelTarget?.id && busy.action === "cancelar"} onClose={closeCancelModal} onConfirm={() => runAction(cancelTarget, "cancelar")} />
       <AdminToast message={toast?.message} tone={toast?.tone} onClose={() => setToast(null)} />
     </main>
   );

@@ -753,7 +753,8 @@
   z-index: 200;
   inset: 0;
   display: grid;
-  padding: var(--gutter);
+  padding: 20px;
+  overflow-y: auto;
   background: rgb(16 27 21 / 62%);
   backdrop-filter: blur(7px);
   place-items: center;
@@ -763,8 +764,11 @@
 .admin-modal {
   position: relative;
   width: min(100%, 620px);
-  padding: clamp(30px, 5vw, 65px);
-  overflow: hidden;
+  padding: clamp(24px, 5vw, 65px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
   background: var(--paper);
   border-top: 3px solid var(--color-floral);
   animation: modal-in 300ms var(--ease-editorial);
@@ -811,7 +815,7 @@
   right: var(--space-lg);
   bottom: var(--space-lg);
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-sm);
   width: min(calc(100% - 40px), 440px);
@@ -926,4 +930,23 @@
 @media (prefers-reduced-motion: reduce) {
   .button-loader,
   .loading-row i { animation: none; }
+}
+
+/* Conteúdo variável deve quebrar dentro das colunas, sem ocultar informação. */
+.appointment-item > *, .agenda-hero > *, .filter-heading > * { min-width: 0; }
+.appointment-client h3, .agenda-hero h1, .admin-toast span { overflow-wrap: anywhere; }
+.field-control:focus-within { outline: 2px solid var(--forest); outline-offset: 3px; }
+.field-control input, .field-control select { font-size: max(16px, var(--fs-body)); }
+.status-tabs button { min-height: 44px; }
+.danger-button { background: #86515d; border-color: #86515d; }
+.admin-toast button { width: 44px; height: 44px; }
+@media (max-width: 650px) {
+  .admin-header .admin-container { flex-wrap: wrap; gap: 8px 16px; padding-block: 12px; }
+  .admin-header nav { margin-left: auto; }
+  .admin-header nav a { min-width: 44px; justify-content: center; }
+  .filter-heading { flex-wrap: wrap; gap: 12px; }
+  .appointment-item { gap: 24px; padding-block: 32px; }
+  .agenda-hero h1 { font-size: clamp(2.75rem, 12vw, 4.5rem); }
+  .modal-actions { grid-template-columns: minmax(0, 1fr); }
+  .modal-actions button { width: 100%; justify-content: center; }
 }

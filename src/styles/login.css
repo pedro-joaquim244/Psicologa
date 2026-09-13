@@ -15,16 +15,19 @@ html.auth-screen, .auth-screen body, .auth-screen #root { height: 100%; overflow
   min-width: 0;
   min-height: 0;
   height: 100%;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   gap: 16px;
   padding: max(24px, env(safe-area-inset-top)) clamp(24px, 5vw, 80px) max(16px, env(safe-area-inset-bottom));
 }
 .login-top { gap: 16px; }
+.login-panel > * { flex: 0 0 auto; }
 .login-top .admin-brand { min-width: 0; gap: 12px; }
 .login-top .admin-brand-copy strong { font-size: 1.25rem; }
 .login-top .back-to-site { flex-shrink: 0; gap: 8px; font-size: .75rem; }
-.login-content { width: min(100%, 480px); min-height: 0; padding: 0; margin: auto; }
+.login-content { width: min(100%, 480px); min-height: min-content; padding: 0; margin: auto; }
 .login-audience { gap: 32px; margin-bottom: 24px; }
 .login-audience a { min-height: 44px; font-size: .875rem; }
 .login-heading > .floral-mark { width: 28px; height: 28px; }
@@ -32,7 +35,7 @@ html.auth-screen, .auth-screen body, .auth-screen #root { height: 100%; overflow
 .login-heading h1 { margin-top: 12px; font-size: clamp(2.5rem, 4.3vw, 4rem); line-height: 1; }
 .login-heading > p:last-child { max-width: 440px; margin-top: 12px; font-size: .875rem; line-height: 1.5; }
 .login-form { margin-top: 24px; gap: 16px; }
-.login-form .admin-field { gap: 4px; font-size: .6875rem; line-height: 1.4; }
+.login-form .admin-field { gap: 4px; font-size: .8125rem; line-height: 1.4; }
 .login-form .field-control { min-height: 44px; }
 .login-form .field-control input { height: 44px; font-size: 16px; }
 .login-form .password-toggle { width: 44px; height: 44px; flex: 0 0 44px; }
@@ -111,7 +114,7 @@ html.auth-screen, .auth-screen body, .auth-screen #root { height: 100%; overflow
   .login-form .admin-field { gap: 2px; }
   .login-submit { min-height: 44px; padding-block: 8px; }
   .login-form .verification-notice, .login-form .verification-link { font-size: .75rem; }
-  .login-footer { font-size: .5625rem; }
+  .login-footer { font-size: .6875rem; }
   .login-page:not(.is-verifying) .login-content:has(.login-error) .login-heading > p:last-child { display: none; }
 }
 @container (max-width: 599px) and (max-height: 400px) {
@@ -120,4 +123,18 @@ html.auth-screen, .auth-screen body, .auth-screen #root { height: 100%; overflow
   .login-top .admin-brand { display: none; }
   .login-audience { padding-right: 88px; gap: 12px; }
   .login-audience a { font-size: .75rem; }
+}
+
+/* Quando o teclado ou mensagens reduzem a área útil, rolamos o painel. */
+@container (max-width: 599px) and (max-height: 480px) {
+  .login-panel { grid-template-rows: auto 1fr auto; }
+  .login-top { position: static; width: 100%; }
+  .login-audience { padding-right: 0; }
+  .login-top .back-to-site, .login-audience a, .login-switch a { min-height: 44px; }
+}
+@media (max-width: 380px) {
+  .login-top { flex-wrap: wrap; gap: 4px 12px; }
+  .login-top .back-to-site { margin-left: auto; }
+  .is-registering .login-form { grid-template-columns: minmax(0, 1fr); }
+  .is-registering .login-form > .admin-field { grid-column: 1 / -1; }
 }

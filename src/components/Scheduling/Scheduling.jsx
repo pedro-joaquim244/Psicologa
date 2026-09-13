@@ -6,7 +6,7 @@ import FloralMark from '../Shared/FloralMark';
 import BookingCalendar from './BookingCalendar';
 import BookingForm from './BookingForm';
 import { createAppointment, listAvailableSlots } from '../../services/api';
-import { bookingDateLabel, localDateKey, validateBooking } from '../../utils/scheduling';
+import { bookingDateLabel, clinicDateKey, clinicNow, validateBooking } from '../../utils/scheduling';
 import { ScrollTrigger } from '../../lib/motion';
 import '../../styles/scheduling.css';
 
@@ -47,7 +47,7 @@ export default function Scheduling() {
     });
     observer.observe(rootRef.current);
     const previous = resumeBooking.current;
-    if (previous?.date >= localDateKey()) {
+    if (previous?.date >= clinicDateKey()) {
       setDate(previous.date);
       loadSlots(previous.date, '', previous.horario);
     }
@@ -67,9 +67,9 @@ export default function Scheduling() {
       const slots = await listAvailableSlots(selectedDate, { signal: controller.signal });
       if (controller.signal.aborted || !mounted.current) return;
       // The server owns availability; also omit times already elapsed today.
-      const now = new Date();
-      setAvailability({ date: selectedDate, slots: slots.filter((item) => item.horario !== exclude && new Date(`${selectedDate}T${item.horario}:00`) > now), loading: false, error: '' });
-      if (preferred) setSlot(slots.find((item) => item.horario === preferred && new Date(`${selectedDate}T${item.horario}:00`) > now) || null);
+      const now = clinicNow();
+      setAvailability({ date: selectedDate, slots: slots.filter((item) => item.horario !== exclude && `${selectedDate} ${item.horario}:00` > now), loading: false, error: '' });
+      if (preferred) setSlot(slots.find((item) => item.horario === preferred && `${selectedDate} ${item.horario}:00` > now) || null);
     } catch (error) {
       if (controller.signal.aborted || !mounted.current) return;
       setAvailability({ date: selectedDate, slots: [], loading: false, error: error.message });
@@ -77,7 +77,7 @@ export default function Scheduling() {
   };
 
   const selectDate = (selectedDate) => {
-    if (submittingRef.current || selectedDate < localDateKey()) return;
+    if (submittingRef.current || selectedDate < clinicDateKey()) return;
     setDate(selectedDate);
     setSlot(null);
     setReceipt(null);
@@ -94,7 +94,7 @@ export default function Scheduling() {
       requestAnimationFrame(() => rootRef.current?.querySelector('[aria-invalid="true"]')?.focus());
       return;
     }
-    if (new Date(`${date}T${slot.horario}:00`) <= new Date()) {
+    if (`${date} ${slot.horario}:00` <= clinicNow()) {
       setMessage('Esse horário já passou. Escolha outro horário.');
       setSlot(null);
       loadSlots(date);
@@ -138,7 +138,7 @@ export default function Scheduling() {
       <div className="page-container">
         <div className="booking-heading">
           <div><SectionLabel>AGENDAMENTO</SectionLabel><h2 id="booking-title" className="display-title">Um encontro.<br /><em>Um tempo para você.</em></h2></div>
-          <div className="booking-intro"><FloralMark /><p>Escolha um dia e um horário disponível para começar. Depois, conte como podemos entrar em contato.</p></div>
+          <div className="booking-intro"><FloralMark /><p>Escolha um dia e um horário disponível para começar. Os horários seguem o fuso de Brasília. Depois, conte como podemos entrar em contato.</p></div>
         </div>
         <div className="booking-layout">
           <div className="booking-date-column">

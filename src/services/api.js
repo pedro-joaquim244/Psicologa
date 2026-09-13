@@ -1,6 +1,6 @@
 import { clearSessionForToken } from "./authStorage";
 
-export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3333").replace(/\/$/, "");
+export const API_URL = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://localhost:3333" : "")).replace(/\/$/, "");
 export const AUTH_EXPIRED_EVENT = "psicologa:auth-expired";
 
 export class ApiError extends Error {
@@ -14,9 +14,12 @@ export class ApiError extends Error {
 
 async function apiRequest(path, { token, body, headers, ...options } = {}) {
   let response;
+  const timeout = AbortSignal.timeout(30000);
+  const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...options,
+      signal,
       headers: {
         Accept: "application/json",
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
@@ -26,7 +29,8 @@ async function apiRequest(path, { token, body, headers, ...options } = {}) {
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
   } catch (error) {
-    if (error?.name === "AbortError") throw error;
+    if (options.signal?.aborted || error?.name === "AbortError") throw error;
+    if (timeout.aborted) throw new ApiError("A resposta demorou mais que o esperado. Confira suas consultas antes de repetir um agendamento.");
     throw new ApiError("Não foi possível conectar à API. Verifique se o servidor está disponível.");
   }
 
@@ -45,6 +49,7 @@ async function apiRequest(path, { token, body, headers, ...options } = {}) {
     throw new ApiError(message, response.status, data);
   }
 
+  if (data === null || !contentType.includes("application/json")) throw new ApiError("A API retornou uma resposta inesperada. Tente novamente.");
   return data;
 }
 

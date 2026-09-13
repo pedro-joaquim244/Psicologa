@@ -7,26 +7,20 @@ import {
   somentePaciente,
 } from "../middlewares/autenticacao.js";
 
+import { clinicNow, generateSlots, validDate, validId, validTime } from '../utils/scheduling.js';
 const router = express.Router();
+router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+router.param('id', (req, res, next, id) => validId(id) ? next() : res.status(400).json({ erro: 'Agendamento inválido.' }));
+
+async function statusConflict(res, id) {
+  const [[current]] = await db.query('SELECT id FROM agendamentos WHERE id = ? LIMIT 1', [id]);
+  return res.status(current ? 409 : 404).json({ erro: current ? 'O status deste agendamento mudou. Atualize a agenda antes de tentar novamente.' : 'Agendamento não encontrado.' });
+}
 
 
 // =====================================================
 // FUNÇÕES AUXILIARES
 // =====================================================
-
-function horaParaMinutos(hora) {
-  const [h, m] = hora.split(":").map(Number);
-
-  return h * 60 + m;
-}
-
-function minutosParaHora(minutos) {
-  const hora = Math.floor(minutos / 60);
-  const minuto = minutos % 60;
-
-  return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
-}
-
 
 // =====================================================
 // CRIAR AGENDAMENTO
@@ -47,7 +41,7 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
       horario,
       modalidade,
       profissional_id = 1,
-    } = req.body;
+    } = req.body || {};
     const { nome, email, telefone } = req.paciente;
 
 
@@ -75,17 +69,21 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
     }
 
 
-    const dataJS = new Date(`${data}T12:00:00`);
-
-    if (Number.isNaN(dataJS.getTime())) {
-      return res.status(400).json({
-        erro: "Data inválida.",
-      });
+    if (!validDate(data) || !validTime(horario) || !validId(profissional_id)) {
+      return res.status(400).json({ erro: 'Confira a data, o horário e o profissional.' });
     }
-
-
-    const diaSemana = dataJS.getDay();
-
+    if (data + ' ' + horario + ':00' <= clinicNow()) {
+      return res.status(400).json({ erro: 'Esse horário já passou. Escolha outro horário.' });
+    }
+    const diaSemana = new Date(data + 'T12:00:00Z').getUTCDay();
+    await conexao.beginTransaction();
+    // Lock persistente no banco: cobre instâncias diferentes da API e intervalos
+    // sobrepostos, mesmo quando seus horários de início são diferentes.
+    const [[profissional]] = await conexao.query('SELECT id FROM profissionais WHERE id = ? AND ativo = 1 FOR UPDATE', [profissional_id]);
+    if (!profissional) {
+      await conexao.rollback();
+      return res.status(400).json({ erro: 'Profissional indisponível.' });
+    }
 
     // ===================================================
     // BUSCAR DISPONIBILIDADE DA PSICÓLOGA
@@ -111,82 +109,14 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
     );
 
 
-    const horarioMinutos = horaParaMinutos(horario);
-
-    let disponibilidadeEncontrada = null;
-
-
-    for (const disponibilidade of disponibilidades) {
-      const inicio = horaParaMinutos(
-        disponibilidade.hora_inicio
-      );
-
-      const fim = horaParaMinutos(
-        disponibilidade.hora_fim
-      );
-
-      const duracao = Number(
-        disponibilidade.duracao_minutos
-      );
-
-      const intervalo = Number(
-        disponibilidade.intervalo_minutos
-      );
-
-
-      for (
-        let atual = inicio;
-        atual + duracao <= fim;
-        atual += duracao + intervalo
-      ) {
-        if (atual === horarioMinutos) {
-          disponibilidadeEncontrada =
-            disponibilidade;
-
-          break;
-        }
-      }
-
-
-      if (disponibilidadeEncontrada) {
-        break;
-      }
+    const slot = generateSlots(disponibilidades).find((item) => item.horario === horario);
+    if (!slot) {
+      await conexao.rollback();
+      return res.status(400).json({ erro: 'Este horário não está disponível.' });
     }
-
-
-    if (!disponibilidadeEncontrada) {
-      return res.status(400).json({
-        erro: "Este horário não está disponível.",
-      });
-    }
-
-
-    // ===================================================
-    // CALCULAR HORÁRIO FINAL
-    // ===================================================
-
-    const duracao = Number(
-      disponibilidadeEncontrada.duracao_minutos
-    );
-
-    const horarioFim = minutosParaHora(
-      horarioMinutos + duracao
-    );
-
-
-    const inicioCompleto =
-      `${data} ${horario}:00`;
-
-    const fimCompleto =
-      `${data} ${horarioFim}:00`;
-
-
-    // ===================================================
-    // INICIAR TRANSAÇÃO
-    // ===================================================
-
-    await conexao.beginTransaction();
-
+    const horarioFim = slot.fim;
+    const inicioCompleto = data + ' ' + horario + ':00';
+    const fimCompleto = data + ' ' + horarioFim + ':00';
 
     // ===================================================
     // VERIFICAR BLOQUEIOS
@@ -324,7 +254,7 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
     }
 
 
-    if (error.code === "ER_DUP_ENTRY") {
+    if (["ER_DUP_ENTRY", "ER_LOCK_DEADLOCK", "ER_LOCK_WAIT_TIMEOUT"].includes(error.code)) {
       return res.status(409).json({
         erro: "Este horário já foi reservado.",
       });
@@ -333,17 +263,17 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
 
     console.error(
       "Erro ao realizar agendamento:",
-      error
+      error.code || error.name
     );
 
 
     return res.status(500).json({
       erro: "Erro ao realizar agendamento.",
-      detalhe: error.message,
     });
 
   } finally {
     if (conexao) {
+      try { await conexao.rollback(); } catch { /* Conexão encerrada. */ }
       conexao.release();
     }
   }
@@ -394,7 +324,7 @@ router.get(
     } catch (error) {
       console.error(
         "Erro ao listar agendamentos:",
-        error
+        error.code || error.name
       );
 
 
@@ -462,7 +392,7 @@ router.get(
     } catch (error) {
       console.error(
         "Erro ao buscar agendamento:",
-        error
+        error.code || error.name
       );
 
 
@@ -503,12 +433,7 @@ router.patch(
       );
 
 
-      if (resultado.affectedRows === 0) {
-        return res.status(404).json({
-          erro:
-            "Agendamento não encontrado ou não pode ser confirmado.",
-        });
-      }
+      if (resultado.affectedRows === 0) return statusConflict(res, id);
 
 
       return res.status(200).json({
@@ -519,7 +444,7 @@ router.patch(
     } catch (error) {
       console.error(
         "Erro ao confirmar agendamento:",
-        error
+        error.code || error.name
       );
 
 
@@ -560,12 +485,7 @@ router.patch(
       );
 
 
-      if (resultado.affectedRows === 0) {
-        return res.status(404).json({
-          erro:
-            "Agendamento não encontrado ou não pode ser concluído.",
-        });
-      }
+      if (resultado.affectedRows === 0) return statusConflict(res, id);
 
 
       return res.status(200).json({
@@ -576,7 +496,7 @@ router.patch(
     } catch (error) {
       console.error(
         "Erro ao concluir agendamento:",
-        error
+        error.code || error.name
       );
 
 
@@ -617,12 +537,7 @@ router.patch(
       );
 
 
-      if (resultado.affectedRows === 0) {
-        return res.status(404).json({
-          erro:
-            "Agendamento não encontrado ou já está cancelado.",
-        });
-      }
+      if (resultado.affectedRows === 0) return statusConflict(res, id);
 
 
       return res.status(200).json({
@@ -633,7 +548,7 @@ router.patch(
     } catch (error) {
       console.error(
         "Erro ao cancelar agendamento:",
-        error
+        error.code || error.name
       );
 
 

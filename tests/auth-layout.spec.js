@@ -1,26 +1,22 @@
 import { test, expect } from '@playwright/test';
 
 async function expectFixedForm(page) {
-  const problems = await page.evaluate(() => {
-    const issues = [];
-    for (const el of document.querySelectorAll('.login-panel a, .login-panel button, .login-panel input, .login-heading, .login-footer, .login-error, .verification-notice')) {
-      if (!el.getClientRects().length) continue;
-      const rect = el.getBoundingClientRect();
-      if (rect.top < -1 || rect.bottom > innerHeight + 1 || rect.left < -1 || rect.right > innerWidth + 1) issues.push(el.textContent || el.name);
-    }
-    const content = document.querySelector('.login-content').getBoundingClientRect();
-    const footer = document.querySelector('.login-footer').getBoundingClientRect();
-    if (content.bottom > footer.top + 1) issues.push('Formulário sobrepõe o rodapé');
-    return issues;
-  });
-  expect(problems, 'Campos, mensagens e ações devem caber sem cortes').toEqual([]);
-  await page.evaluate(() => window.scrollTo({ top: 1000, behavior: 'instant' }));
-  await page.mouse.wheel(0, 600);
-  expect(await page.evaluate(() => window.scrollY)).toBe(0);
-  expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(1);
+  // Rolagem vertical é necessária com teclado, zoom ou conteúdo extenso.
+  // Cada controle deve ser alcançável, sem sobrepor conteúdo ou sair da largura.
+  for (const control of await page.locator('.login-panel input, .login-panel button, .login-panel a').all()) {
+    if (!await control.isVisible()) continue;
+    await control.scrollIntoViewIfNeeded();
+    const rect = await control.boundingBox();
+    expect(rect.x).toBeGreaterThanOrEqual(-1);
+    expect(rect.x + rect.width).toBeLessThanOrEqual(page.viewportSize().width + 1);
+    expect(rect.y).toBeGreaterThanOrEqual(-1);
+    expect(rect.y + rect.height).toBeLessThanOrEqual(page.viewportSize().height + 1);
+  }
+  const overlap = await page.evaluate(() => document.querySelector('.login-content').getBoundingClientRect().bottom > document.querySelector('.login-footer').getBoundingClientRect().top + 1);
+  expect(overlap).toBe(false);
 }
 
-test('entrada e cadastro cabem sem rolagem em notebook, celular e paisagem', async ({ page }, testInfo) => {
+test('entrada e cadastro ficam acessíveis em notebook, celular e paisagem', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'Matriz de tamanhos executada uma vez.');
   for (const [width, height] of [[1440,900], [1366,768], [1024,650], [768,1024], [390,844], [375,667], [320,568], [844,390], [667,375], [390,420], [375,367]]) {
     await page.setViewportSize({ width, height });

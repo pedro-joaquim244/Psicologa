@@ -43,7 +43,7 @@
 @media (max-width: 650px) {
   .hero { display: flex; flex-direction: column; align-items: stretch; padding-top: 128px; }
   .hero h1 { font-size: var(--fs-display-xl); }
-  .hero-eyebrow { line-height: 1.8; margin-bottom: var(--space-md); font-size: .5rem; }
+  .hero-eyebrow { line-height: 1.8; margin-bottom: var(--space-md); font-size: .625rem; }
   .hero-description { margin-top: var(--space-md); max-width: 340px; }
   .hero-actions { gap: 8px var(--space-md); }
   .hero-photo { height: auto; aspect-ratio: 4 / 3; margin-top: var(--space-lg); }

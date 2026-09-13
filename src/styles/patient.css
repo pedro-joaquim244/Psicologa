@@ -77,3 +77,12 @@
   .patient-appointment-details:not([hidden]), .patient-loading-rule { animation: none; }
   .patient-filters button::after { transition: none; }
 }
+
+.patient-intro > *, .patient-appointment-row > *, .patient-appointment-details dl > div { min-width: 0; }
+.patient-appointment-details dd { overflow-wrap: anywhere; }
+.patient-detail-actions { flex-wrap: wrap; }
+@media (max-width: 599px) {
+  .patient-filters button { font-size: .75rem; min-width: 44px; }
+  .patient-status { font-size: .75rem; letter-spacing: .03em; }
+  .patient-date small { font-size: .75rem; }
+}

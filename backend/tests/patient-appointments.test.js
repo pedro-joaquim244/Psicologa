@@ -10,7 +10,7 @@ import slotRoutes from '../src/routes/horarios.routes.js';
 
 // SQL real, exclusivamente em tabelas TEMPORARY desta conexão.
 // As tabelas persistentes, contas e agendamentos existentes nunca recebem escritas.
-const tables = ['pacientes', 'agendamentos', 'disponibilidades', 'bloqueios_agenda'];
+const tables = ['pacientes', 'agendamentos', 'disponibilidades', 'bloqueios_agenda', 'profissionais', 'usuarios_admin'];
 const originalQuery = db.query;
 const originalGetConnection = db.getConnection;
 let connection;
@@ -44,6 +44,8 @@ before(async () => {
 
 beforeEach(async () => {
   for (const table of tables) await connection.query(`DELETE FROM ${table}`);
+  await connection.query("INSERT INTO profissionais (id, nome, ativo) VALUES (1, 'Profissional teste', 1)");
+  await connection.query("INSERT INTO usuarios_admin (id, nome, email, senha, tipo, ativo, email_verificado_em) VALUES (1, 'Profissional teste', 'paciente1@example.com', 'hash', 'psicologa', 1, NOW())");
   await connection.query("INSERT INTO pacientes (id, nome, email, telefone, senha, ativo, email_verificado_em) VALUES (1, 'Paciente A', 'paciente1@example.com', '16999998888', 'hash', 1, NOW()), (2, 'Paciente B', 'paciente2@example.com', '16999997777', 'hash', 1, NOW())");
   await connection.query("INSERT INTO disponibilidades (profissional_id, dia_semana, hora_inicio, hora_fim, duracao_minutos, intervalo_minutos, ativo) VALUES (1, ?, '09:00', '12:00', 50, 10, 1)", [new Date(`${date}T12:00:00`).getDay()]);
   for (const [id, patient, hour, status] of [[101, 1, '09', 'confirmado'], [102, 2, '10', 'agendado'], [103, null, '11', 'concluido']]) {
@@ -133,4 +135,37 @@ test('paciente não acessa endpoints administrativos; profissional mantém acess
   assert.equal(admin.status, 200);
   assert.equal(admin.data.length, 3);
   for (const action of ['confirmar', 'concluir', 'cancelar']) assert.equal((await request(`/agendamentos/102/${action}`, { credential, method: 'PATCH' })).status, 200);
+});
+
+test('profissional inativo, e-mail alterado e papel revogado não mantêm acesso', async () => {
+  const credential = token(1, { tipo: 'psicologa' });
+  for (const update of ["ativo = 0", "ativo = 1, email = 'outro@example.com'", "email = 'paciente1@example.com', tipo = 'admin'"]) {
+    await connection.query('UPDATE usuarios_admin SET ' + update + ' WHERE id = 1');
+    assert.equal((await request('/agendamentos', { credential })).status, 401);
+  }
+});
+
+test('status administrativo distingue recurso ausente e transição incompatível', async () => {
+  const credential = token(1, { tipo: 'psicologa' });
+  assert.equal((await request('/agendamentos/101/confirmar', { credential, method: 'PATCH' })).status, 409);
+  assert.equal((await request('/agendamentos/999999/confirmar', { credential, method: 'PATCH' })).status, 404);
+  assert.equal((await request('/agendamentos/103/concluir', { credential, method: 'PATCH' })).status, 409);
+});
+
+test('rejeita datas impossíveis, passadas, IDs inválidos e horários fora do formato', async () => {
+  for (const body of [{ data: '2035-02-30' }, { data: '2020-01-01' }, { horario: '09:00:00' }, { horario: ['09:00'] }, { profissional_id: {} }, { profissional_id: 0 }, { horario: '25:00' }]) {
+    assert.equal((await request('/agendamentos', { method: 'POST', body: { data: date, horario: '11:00', modalidade: 'online', ...body } })).status, 400);
+  }
+  for (const query of ['data=2035-02-30', 'data=2035-09-18&profissional_id=abc', 'data=2035-09-18&data=2035-09-19']) assert.equal((await request('/horarios?' + query)).status, 400);
+  const credential = token(1, { tipo: 'psicologa' });
+  assert.equal((await request('/agendamentos/1.5', { credential })).status, 400);
+});
+
+test('bloqueio cruzando meia-noite e consulta iniciada no dia anterior retiram slots', async () => {
+  await connection.query("INSERT INTO bloqueios_agenda (profissional_id, inicio, fim) VALUES (1, '2035-09-17 23:00:00', '2035-09-18 11:30:00')");
+  assert.deepEqual((await request('/horarios?data=' + date)).data.horarios, []);
+  assert.equal((await request('/agendamentos', { method: 'POST', body: { data: date, horario: '11:00', modalidade: 'online' } })).status, 409);
+  await connection.query('DELETE FROM bloqueios_agenda');
+  await connection.query("UPDATE agendamentos SET inicio = '2035-09-17 23:00:00', fim = '2035-09-18 11:30:00' WHERE id = 101");
+  assert.deepEqual((await request('/horarios?data=' + date)).data.horarios, []);
 });
