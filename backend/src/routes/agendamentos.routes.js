@@ -8,6 +8,7 @@ import {
 } from "../middlewares/autenticacao.js";
 
 import { clinicNow, generateSlots, validDate, validId, validTime } from '../utils/scheduling.js';
+import { loadDayAvailability } from '../services/agenda.js';
 const router = express.Router();
 router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 router.param('id', (req, res, next, id) => validId(id) ? next() : res.status(400).json({ erro: 'Agendamento inválido.' }));
@@ -75,7 +76,6 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
     if (data + ' ' + horario + ':00' <= clinicNow()) {
       return res.status(400).json({ erro: 'Esse horário já passou. Escolha outro horário.' });
     }
-    const diaSemana = new Date(data + 'T12:00:00Z').getUTCDay();
     await conexao.beginTransaction();
     // Lock persistente no banco: cobre instâncias diferentes da API e intervalos
     // sobrepostos, mesmo quando seus horários de início são diferentes.
@@ -89,24 +89,7 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
     // BUSCAR DISPONIBILIDADE DA PSICÓLOGA
     // ===================================================
 
-    const [disponibilidades] = await conexao.query(
-      `
-      SELECT
-        hora_inicio,
-        hora_fim,
-        duracao_minutos,
-        intervalo_minutos
-      FROM disponibilidades
-      WHERE profissional_id = ?
-        AND dia_semana = ?
-        AND ativo = 1
-      ORDER BY hora_inicio
-      `,
-      [
-        profissional_id,
-        diaSemana,
-      ]
-    );
+    const disponibilidades = await loadDayAvailability(conexao, data, profissional_id);
 
 
     const slot = generateSlots(disponibilidades).find((item) => item.horario === horario);

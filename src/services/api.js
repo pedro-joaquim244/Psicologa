@@ -115,3 +115,21 @@ export async function cancelPatientAppointment(id, token) {
 export function getPatientAccount(token, options = {}) {
   return apiRequest('/api/pacientes/me', { method: 'GET', token, ...options });
 }
+
+export async function getAgendaAvailability(date, token, options = {}) {
+  const data = await apiRequest(`/api/agenda?${new URLSearchParams({ data: date })}`, { method: 'GET', token, ...options });
+  if (!['recorrentes', 'extras', 'bloqueios', 'horarios'].every((key) => Array.isArray(data?.[key]))) {
+    throw new ApiError('Não foi possível ler os horários da agenda. Tente novamente.');
+  }
+  return data;
+}
+
+export function saveAgendaPeriod(resource, id, details, token) {
+  return apiRequest(`/api/agenda/${resource}${id ? `/${encodeURIComponent(id)}` : ''}`, {
+    method: id ? 'PATCH' : 'POST', body: details, token,
+  });
+}
+
+export function deleteAgendaPeriod(resource, id, token) {
+  return apiRequest(`/api/agenda/${resource}/${encodeURIComponent(id)}`, { method: 'DELETE', token });
+}

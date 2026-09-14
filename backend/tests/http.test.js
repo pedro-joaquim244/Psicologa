@@ -17,6 +17,16 @@ test('CORS autoriza origens exatas e não ecoa origens arbitrárias', async () =
     assert.equal(response.headers.get('x-powered-by'), null);
   }
 });
+test('preflight permite excluir horários com Authorization a partir do frontend autorizado', async () => {
+  const response = await fetch(origin + '/api/agenda/bloqueios/1', {
+    method: 'OPTIONS',
+    headers: { Origin: 'https://consultorio.example', 'Access-Control-Request-Method': 'DELETE', 'Access-Control-Request-Headers': 'authorization,content-type' },
+  });
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get('access-control-allow-origin'), 'https://consultorio.example');
+  assert.ok(response.headers.get('access-control-allow-methods').split(',').includes('DELETE'));
+  assert.match(response.headers.get('access-control-allow-headers').toLowerCase(), /authorization/);
+});
 test('JSON inválido, payload grande e rota inexistente retornam erro JSON sem stack', async () => {
   for (const [path, body, status] of [['/api/auth/login', '{', 400], ['/api/auth/login', JSON.stringify({ senha: 'x'.repeat(40000) }), 413], ['/api/inexistente', '{}', 404]]) {
     const response = await fetch(origin + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });

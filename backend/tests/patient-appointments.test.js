@@ -7,6 +7,7 @@ import db from '../src/database.js';
 import patientRoutes from '../src/routes/usuario.routes.js';
 import appointmentRoutes from '../src/routes/agendamentos.routes.js';
 import slotRoutes from '../src/routes/horarios.routes.js';
+import { ensureAgendaSchema } from '../src/services/agendaSchema.js';
 
 // SQL real, exclusivamente em tabelas TEMPORARY desta conexão.
 // As tabelas persistentes, contas e agendamentos existentes nunca recebem escritas.
@@ -31,6 +32,7 @@ before(async () => {
     const temporary = schema['Create Table'].split('\n').filter((line) => !line.trim().startsWith('CONSTRAINT ')).join('\n').replace(/,\n\)/, '\n)').replace('CREATE TABLE', 'CREATE TEMPORARY TABLE');
     await connection.query(temporary);
   }
+  await ensureAgendaSchema(connection);
   db.query = (...args) => connection.query(...args);
   db.getConnection = async () => ({ query: (...args) => connection.query(...args), beginTransaction: () => connection.beginTransaction(), commit: () => connection.commit(), rollback: () => connection.rollback(), release() {} });
   const app = express();

@@ -7,6 +7,7 @@ import agendamentosRoutes from './routes/agendamentos.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import pacientesRoutes from './routes/pacientes.routes.js';
 import usuarioRoutes from './routes/usuario.routes.js';
+import agendaRoutes from './routes/agenda.routes.js';
 
 export function createApp({ frontendUrl = process.env.FRONTEND_URL, production = process.env.NODE_ENV === 'production' } = {}) {
   const app = express();
@@ -23,7 +24,7 @@ export function createApp({ frontendUrl = process.env.FRONTEND_URL, production =
     res.set('Cache-Control', 'no-store');
     next();
   });
-  app.use(cors({ origin(origin, callback) { callback(null, !origin || origins.has(origin)); }, methods: ['GET', 'POST', 'PATCH', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'], exposedHeaders: ['Retry-After'] }));
+  app.use(cors({ origin(origin, callback) { callback(null, !origin || origins.has(origin)); }, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'], exposedHeaders: ['Retry-After'] }));
   app.use(express.json({ limit: '32kb' }));
   app.get('/', (_req, res) => res.json({ mensagem: 'API da agenda funcionando!' }));
   app.get('/api/teste-banco', async (_req, res) => {
@@ -40,6 +41,7 @@ export function createApp({ frontendUrl = process.env.FRONTEND_URL, production =
   app.use('/api/usuario', usuarioRoutes);
   app.use('/api/horarios', horariosRoutes);
   app.use('/api/agendamentos', agendamentosRoutes);
+  app.use('/api/agenda', agendaRoutes);
   app.use((_req, res) => res.status(404).json({ erro: 'Rota não encontrada.' }));
   app.use((error, _req, res, _next) => {
     if (error.type === 'entity.parse.failed') return res.status(400).json({ erro: 'O corpo da solicitação deve ser um JSON válido.' });
