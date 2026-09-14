@@ -1,6 +1,6 @@
-import { clearStoredSession } from "./authStorage";
+import { clearSessionForToken } from "./authStorage";
 
-export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3333").replace(/\/$/, "");
+export const API_URL = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://localhost:3333" : "")).replace(/\/$/, "");
 export const AUTH_EXPIRED_EVENT = "psicologa:auth-expired";
 
 export class ApiError extends Error {
@@ -14,9 +14,12 @@ export class ApiError extends Error {
 
 async function apiRequest(path, { token, body, headers, ...options } = {}) {
   let response;
+  const timeout = AbortSignal.timeout(30000);
+  const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...options,
+      signal,
       headers: {
         Accept: "application/json",
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
@@ -26,7 +29,8 @@ async function apiRequest(path, { token, body, headers, ...options } = {}) {
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
   } catch (error) {
-    if (error?.name === "AbortError") throw error;
+    if (options.signal?.aborted || error?.name === "AbortError") throw error;
+    if (timeout.aborted) throw new ApiError("A resposta demorou mais que o esperado. Confira suas consultas antes de repetir um agendamento.");
     throw new ApiError("Não foi possível conectar à API. Verifique se o servidor está disponível.");
   }
 
@@ -36,8 +40,8 @@ async function apiRequest(path, { token, body, headers, ...options } = {}) {
     : await response.text().catch(() => "");
 
   if (response.status === 401 && token) {
-    clearStoredSession();
-    window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
+    clearSessionForToken(token);
+    window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT, { detail: { token } }));
   }
 
   if (!response.ok) {
@@ -45,6 +49,7 @@ async function apiRequest(path, { token, body, headers, ...options } = {}) {
     throw new ApiError(message, response.status, data);
   }
 
+  if (data === null || !contentType.includes("application/json")) throw new ApiError("A API retornou uma resposta inesperada. Tente novamente.");
   return data;
 }
 
@@ -93,4 +98,38 @@ export function verifyEmail(details, audience) {
 
 export function resendEmailCode(desafio, audience) {
   return apiRequest(`/api/${audience === 'paciente' ? 'pacientes' : 'auth'}/reenviar-codigo`, { method: 'POST', body: { desafio } });
+}
+
+export async function listPatientAppointments(token, options = {}) {
+  const data = await apiRequest('/api/usuario/agendamentos', { method: 'GET', token, ...options });
+  if (!Array.isArray(data)) throw new ApiError('Não foi possível ler suas consultas. Tente novamente.');
+  return data;
+}
+
+export async function cancelPatientAppointment(id, token) {
+  const data = await apiRequest(`/api/usuario/agendamentos/${encodeURIComponent(id)}/cancelar`, { method: 'PATCH', token });
+  if (!data?.agendamento?.id || data.agendamento.status !== 'cancelado') throw new ApiError('Não foi possível confirmar o cancelamento. Tente novamente.');
+  return data.agendamento;
+}
+
+export function getPatientAccount(token, options = {}) {
+  return apiRequest('/api/pacientes/me', { method: 'GET', token, ...options });
+}
+
+export async function getAgendaAvailability(date, token, options = {}) {
+  const data = await apiRequest(`/api/agenda?${new URLSearchParams({ data: date })}`, { method: 'GET', token, ...options });
+  if (!['recorrentes', 'extras', 'bloqueios', 'horarios'].every((key) => Array.isArray(data?.[key]))) {
+    throw new ApiError('Não foi possível ler os horários da agenda. Tente novamente.');
+  }
+  return data;
+}
+
+export function saveAgendaPeriod(resource, id, details, token) {
+  return apiRequest(`/api/agenda/${resource}${id ? `/${encodeURIComponent(id)}` : ''}`, {
+    method: id ? 'PATCH' : 'POST', body: details, token,
+  });
+}
+
+export function deleteAgendaPeriod(resource, id, token) {
+  return apiRequest(`/api/agenda/${resource}/${encodeURIComponent(id)}`, { method: 'DELETE', token });
 }

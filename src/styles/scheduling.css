@@ -75,3 +75,16 @@
   .booking-calendar { max-width: 480px; }
   .booking-success { padding: var(--space-md); }
 }
+@media (max-width: 420px) {
+  .booking-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .booking-login-gate .button { width: 100%; justify-content: center; margin-right: 0; }
+  .booking-login-gate .text-link { width: 100%; justify-content: center; }
+}
+
+.booking-field input { font-size: max(16px, var(--fs-body)); }
+.booking-heading > *, .booking-date-column { min-width: 0; }
+.booking-summary, .booking-success, .booking-intro { overflow-wrap: anywhere; }
+@media (max-width: 380px) {
+  .booking-heading .display-title { font-size: clamp(2.25rem, 10.5vw, 2.8rem); }
+  .booking-heading { margin-bottom: 32px; }
+}

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const api = 'http://localhost:3333/api';
+const api = '**/api';
 const selectedDate = '2030-09-18';
 const slots = [{ horario: '09:00', fim: '09:50' }, { horario: '15:00', fim: '15:50' }];
 const user = { id: 1, nome: 'Dra. Helena Martins', tipo: 'psicologa' };
@@ -58,7 +58,7 @@ test('paciente cria conta, reserva e psicóloga confirma no painel', async ({ pa
   page.on('pageerror', (error) => errors.push(error.message));
   const requests = await setup(page, { authenticated: false });
   await page.goto('/');
-  await page.getByRole('link', { name: 'Agendar uma conversa', exact: true }).click();
+  await page.locator('#inicio').getByRole('link', { name: 'Agendar uma conversa', exact: true }).click();
   await expect(page).toHaveURL(/#agendamento$/);
   await page.locator(`[data-date="${selectedDate}"]`).click();
   await page.getByRole('button', { name: '09:00 até 09:50' }).click();

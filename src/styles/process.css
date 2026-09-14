@@ -13,6 +13,6 @@
   .process-top > span { display: none; }
   .process-section .display-title { font-size: var(--fs-display); }
   .process-section .display-title > span:last-child { padding-left: 0; margin-top: var(--space-xs); }
-  .process-bottom { grid-template-columns: 1fr; padding-left: 14%; margin-top: var(--space-lg); gap: var(--space-md); }
+  .process-bottom { grid-template-columns: 1fr; padding-left: 0; margin-top: var(--space-lg); gap: var(--space-md); }
   .process-vertical { display: none; }
 }

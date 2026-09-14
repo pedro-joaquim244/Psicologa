@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { images, site, whatsappUrl } from '../../config/site';
+import Photo from '../Shared/Photo';
 import ArrowLink from '../Shared/ArrowLink';
 import CircularBadge from '../Shared/CircularBadge';
 import SectionLabel from '../Shared/SectionLabel';
@@ -39,7 +40,7 @@ export default function CTA() {
         </div>
         <span className="cta-note">O PRIMEIRO PASSO PODE SER UMA CONVERSA.</span>
         </div>
-        <div className="cta-visual"><figure className="cta-photo" data-image-reveal><img src={images.hero.src} alt={images.hero.alt} width="800" height="1200" loading="lazy" /></figure><CircularBadge /><p className="cta-photo-note">Seu próximo capítulo<br /><em>pode começar aqui.</em></p></div>
+        <div className="cta-visual"><figure className="cta-photo" data-image-reveal><Photo image={images.closing} sizes="(max-width: 650px) 90vw, (max-width: 1600px) 36vw, 520px" /></figure><CircularBadge /><p className="cta-photo-note">Seu próximo capítulo<br /><em>pode começar aqui.</em></p></div>
       </div>
     </section>
   );

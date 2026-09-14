@@ -11,7 +11,7 @@ npm run dev
 
 O frontend fica em `http://localhost:5173`. A API deve estar ativa em `http://localhost:3333`.
 
-O Vite mantém essa origem com `strictPort`. O backend atual autoriza `http://localhost:5173` no CORS; usar `127.0.0.1` ou outra porta exige ajustar `FRONTEND_URL` no ambiente do backend. O comando `preview` serve para conferir o build; para testar contra a API real, use a origem autorizada.
+O Vite mantém essa origem com `strictPort`. Configure `FRONTEND_URL` com as origens exatas autorizadas, separadas por vírgula quando necessário. Se a variável não existir, apenas em desenvolvimento a API aceita localhost e 127.0.0.1 nas portas 5173 e 4173. Em produção nenhuma origem externa é liberada por padrão. Para testar o preview contra a API local, defina `VITE_API_URL=http://localhost:3333` antes do build e autorize a origem do preview em `FRONTEND_URL`.
 
 Para gerar e conferir a versão de produção:
 
@@ -25,7 +25,7 @@ npm run preview
 - `/adm/login`: autenticação da psicóloga;
 - `/adm/agenda`: agenda protegida, resumo, filtros e ações de confirmar, concluir e cancelar.
 
-O link discreto **Área profissional** fica na linha inferior do rodapé existente. As credenciais de desenvolvimento fornecidas são `psicologa@email.com` e `123456`.
+O link discreto **Área profissional** fica na linha inferior do rodapé existente. Não há credenciais padrão. Para provisionar uma conta, defina `ADMIN_NAME`, `ADMIN_EMAIL` e `ADMIN_PASSWORD` no ambiente e execute `node src/criar-admin.js` dentro de `backend/`. A senha exige pelo menos 12 caracteres e no máximo 72 bytes. O script não sobrescreve contas existentes nem imprime senhas. Se uma instalação ainda usa a senha de demonstração antiga, altere-a antes de publicar.
 
 ## Agendamento público
 
@@ -40,9 +40,17 @@ A seção `#agendamento` fica entre o FAQ e o contato final. Os CTAs do hero, me
 
 A landing não consulta nem exibe a lista de pacientes. Os dados básicos da própria conta ficam na sessão do navegador.
 
-O token e os dados básicos do usuário ficam em `localStorage`, nas chaves `psicologa_token` e `psicologa_usuario`. A senha nunca é armazenada. Todas as requisições administrativas enviam o JWT no cabeçalho `Authorization`; uma resposta `401` limpa a sessão e retorna ao login.
+O token e os dados básicos ficam em `localStorage`: `psicologa_token` / `psicologa_usuario` para a profissional e `paciente_token` / `paciente_usuario` para o paciente. A senha nunca é armazenada. As requisições privadas enviam o JWT em `Authorization`; uma resposta `401` remove somente a sessão correspondente ao token rejeitado. Sessões antigas de paciente são migradas automaticamente para suas próprias chaves.
 
-A URL da API é centralizada em `src/services/api.js`. Para apontar para outro endereço, copie `.env.example` para `.env.local` e altere:
+## Área do paciente
+
+No cabeçalho existente, clique no nome do paciente e em **Minhas consultas**. No celular, abra primeiro o menu principal. `/minhas-consultas` oferece filtros instantâneos, detalhes e cancelamento com confirmação; `/minha-conta` mostra os dados da própria conta. As duas páginas exigem login de paciente e preservam o destino após a confirmação por e-mail.
+
+`GET /api/usuario/agendamentos` e `PATCH /api/usuario/agendamentos/:id/cancelar` reutilizam os middlewares de JWT e validação da conta. Toda consulta SQL inclui `paciente_id = req.usuario.id`. O banco já possui essa chave estrangeira; novas reservas já a preenchem usando a conta autenticada. Registros antigos sem vínculo não são associados por nome ou e-mail.
+
+Não há migração nova nem dependência adicional. O cancelamento mantém a regra administrativa existente (qualquer status diferente de `cancelado`, sem prazo de antecedência), conserva o histórico e libera a disponibilidade conforme as regras atuais. Os detalhes não exibem links de videochamada inexistentes. Consulte [a entrega e o roteiro de testes](docs/area-paciente.md).
+
+A URL da API é centralizada em `src/services/api.js`. Em desenvolvimento há fallback para localhost; builds de produção sem `VITE_API_URL` usam a mesma origem do frontend. Requisições têm limite de 30 segundos e não são repetidas automaticamente. Para apontar para outro endereço, copie `.env.example` para `.env.local` e altere:
 
 ```env
 VITE_API_URL=http://localhost:3333
@@ -62,7 +70,7 @@ Os códigos têm seis dígitos, valem por 10 minutos e são de uso único. O ree
 
 As rotas `POST /api/pacientes/verificar-email` e `/api/auth/verificar-email` recebem `{ desafio, codigo }`. As rotas correspondentes `/reenviar-codigo` recebem `{ desafio }`. O desafio é temporário e fica apenas em memória na tela; recarregar a página exige reiniciar o login.
 
-Para verificar o backend, execute `npm test` dentro de `backend/`, com o MySQL configurado e a migração aplicada. Os testes usam tabelas temporárias na conexão e entrega de e-mail simulada, sem alterar contas reais nem enviar mensagens. A interface é coberta por `tests/email-verification.spec.js` e pelos fluxos de cadastro, login e reserva.
+Para verificar o backend, execute `npm test` dentro de `backend/`, com o MySQL configurado e a migração existente aplicada. Os testes de autenticação e privacidade usam tabelas temporárias e entrega de e-mail simulada. O teste de concorrência cria uma base `agenda_test_<identificador aleatório>`, copia somente os schemas, insere fixtures e remove essa base ao terminar. Ele exige permissão de criar/remover bases descartáveis; use uma conta de testes, não acrescente essas permissões à conta de produção. Nenhuma conta real é alterada e nenhuma mensagem é enviada. A interface é coberta por `tests/email-verification.spec.js` e pelos fluxos de cadastro, login e reserva.
 
 ## Estrutura
 
@@ -135,3 +143,21 @@ Nome, CRP, retrato e contatos presentes na landing são demonstrativos. Atualize
 - `bootstrap` e `bootstrap-icons`;
 - `vite` e `@vitejs/plugin-react`;
 - `@playwright/test` para testes no navegador.
+
+## Revisão de segurança, mobile e publicação — setembro/2026
+
+Consulte [a auditoria inicial](docs/auditoria-projeto.md) e [o relatório de implementação e testes](docs/relatorio-melhorias.md).
+
+O agendamento preserva a constraint existente de slots ativos e usa uma transação com lock da linha de profissionais para serializar reservas simultâneas. Nenhum schema ou dado existente foi alterado. Datas impossíveis/passadas, horários e IDs malformados são recusados. Duração, intervalo, bloqueios e valores de status foram preservados. Uma transição administrativa incompatível retorna 409 e um ID inexistente retorna 404. O middleware profissional revalida conta ativa, papel e e-mail em cada requisição protegida.
+
+Login e cadastro podem rolar verticalmente quando o teclado, mensagens ou a altura da tela exigirem. Modais têm altura máxima e rolagem interna. As requisições continuam separadas por perfil e pacientes recebem somente os próprios dados.
+
+### Vercel Services
+
+Mantenha o projeto configurado com framework **Services**. O arquivo vercel.json conserva os serviços frontend (raiz) e backend (pasta backend), encaminha /api ao Express e aplica o fallback /index.html somente dentro do frontend. Isso prepara as rotas React para acesso direto sem capturar a API. Configuração conforme [Vercel Services](https://vercel.com/kb/guide/vercel-services) e [Vite SPA](https://vercel.com/docs/frameworks/frontend/vite#using-vite-to-make-spas).
+
+- Mesma origem: deixe VITE_API_URL vazia/removida no build. Outro domínio de API: defina sua origem HTTPS, sem /api.
+- Backend: configure DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET aleatório, JWT_EXPIRES_IN e FRONTEND_URL com a origem pública real.
+- SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS e SMTP_FROM pertencem exclusivamente ao backend. A porta 465 ativa TLS; demais portas usam STARTTLS. Não há variável SECURE em uso.
+- TRUST_PROXY é opcional e deve listar somente IPs/sub-redes de proxies conhecidos. O limite por IP é local ao processo; em múltiplas instâncias, configure também limitação de tráfego na infraestrutura. O limite de desafios por conta já é persistido no MySQL.
+- SMTP real, banco remoto e deploy Vercel devem ser validados no ambiente de publicação. Os testes locais não comprovam entrega de mensagens, acesso a um MySQL remoto ou roteamento no domínio final.

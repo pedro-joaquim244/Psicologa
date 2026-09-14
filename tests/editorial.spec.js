@@ -27,7 +27,7 @@ test('sistema editorial e novas seções mantêm leitura em todas as telas', asy
   expect(new Set(ids).size).toBe(ids.length);
 });
 
-test('fotografia do atendimento acompanha foco sem remover os links de contato', async ({ page }) => {
+test('cada atendimento mantém sua foto bem enquadrada e seus links acessíveis', async ({ page }) => {
   await page.goto('/#atendimento');
   const online = page.getByRole('link', { name: 'Saiba mais sobre psicoterapia online pelo WhatsApp' });
   await online.focus();
@@ -36,6 +36,17 @@ test('fotografia do atendimento acompanha foco sem remover os links de contato',
   await expect(online).toHaveAttribute('href', /wa.me.*online/);
   await page.getByRole('link', { name: 'Saiba mais sobre psicoterapia presencial pelo WhatsApp' }).focus();
   await expect(page.locator('.services-preview img').nth(0)).toHaveClass('is-active');
+  for (const frame of await page.locator('.services-preview').all()) {
+    await frame.scrollIntoViewIfNeeded();
+    const visibleFraction = await frame.evaluate(element => {
+      const photo = element.querySelector('img');
+      const sourceRatio = Number(photo.getAttribute('width')) / Number(photo.getAttribute('height'));
+      const frameRatio = element.clientWidth / element.clientHeight;
+      return Math.min(sourceRatio, frameRatio) / Math.max(sourceRatio, frameRatio);
+    });
+    expect(visibleFraction, 'O enquadramento deve preservar a maior parte da fotografia').toBeGreaterThan(.75);
+    await expect(frame.locator('img')).toHaveCSS('opacity', '1');
+  }
 });
 
 test('texto horizontal e percurso SVG respondem ao scroll', async ({ page }, testInfo) => {
