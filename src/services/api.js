@@ -1,22 +1,27 @@
-import { clearStoredSession } from "./authStorage";
+import { clearSessionForToken } from "./authStorage";
 
-export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3333").replace(/\/$/, "");
+export const API_URL = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://localhost:3333" : "")).replace(/\/$/, "");
 export const AUTH_EXPIRED_EVENT = "psicologa:auth-expired";
+export const RATE_LIMIT_MESSAGE = "Você realizou muitas ações em pouco tempo. Aguarde alguns instantes e tente novamente.";
 
 export class ApiError extends Error {
-  constructor(message, status = 0, data = null) {
+  constructor(message, status = 0, data = null, retryAfter = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.data = data;
+    this.retryAfter = retryAfter;
   }
 }
 
 async function apiRequest(path, { token, body, headers, ...options } = {}) {
   let response;
+  const timeout = AbortSignal.timeout(30000);
+  const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...options,
+      signal,
       headers: {
         Accept: "application/json",
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
@@ -26,7 +31,8 @@ async function apiRequest(path, { token, body, headers, ...options } = {}) {
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
   } catch (error) {
-    if (error?.name === "AbortError") throw error;
+    if (options.signal?.aborted || error?.name === "AbortError") throw error;
+    if (timeout.aborted) throw new ApiError("A resposta demorou mais que o esperado. Confira suas consultas antes de repetir um agendamento.");
     throw new ApiError("Não foi possível conectar à API. Verifique se o servidor está disponível.");
   }
 
@@ -36,15 +42,20 @@ async function apiRequest(path, { token, body, headers, ...options } = {}) {
     : await response.text().catch(() => "");
 
   if (response.status === 401 && token) {
-    clearStoredSession();
-    window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
+    clearSessionForToken(token);
+    window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT, { detail: { token } }));
   }
 
   if (!response.ok) {
-    const message = data?.erro || data?.mensagem || data?.message || "Não foi possível concluir a solicitação.";
-    throw new ApiError(message, response.status, data);
+    const retryAfterValue = Number(response.headers.get("retry-after"));
+    const retryAfter = Number.isFinite(retryAfterValue) && retryAfterValue > 0 ? retryAfterValue : null;
+    const message = response.status === 429
+      ? (data?.erro || RATE_LIMIT_MESSAGE)
+      : (data?.erro || data?.mensagem || data?.message || "Não foi possível concluir a solicitação.");
+    throw new ApiError(message, response.status, data, retryAfter);
   }
 
+  if (data === null || !contentType.includes("application/json")) throw new ApiError("A API retornou uma resposta inesperada. Tente novamente.");
   return data;
 }
 
@@ -91,6 +102,41 @@ export function verifyEmail(details, audience) {
   return apiRequest(`/api/${audience === 'paciente' ? 'pacientes' : 'auth'}/verificar-email`, { method: 'POST', body: details });
 }
 
-export function resendEmailCode(desafio, audience) {
-  return apiRequest(`/api/${audience === 'paciente' ? 'pacientes' : 'auth'}/reenviar-codigo`, { method: 'POST', body: { desafio } });
+export function resendEmailCode(request, audience) {
+  const body = typeof request === 'string' ? { desafio: request } : request;
+  return apiRequest(`/api/${audience === 'paciente' ? 'pacientes' : 'auth'}/reenviar-codigo`, { method: 'POST', body });
+}
+
+export async function listPatientAppointments(token, options = {}) {
+  const data = await apiRequest('/api/usuario/agendamentos', { method: 'GET', token, ...options });
+  if (!Array.isArray(data)) throw new ApiError('Não foi possível ler suas consultas. Tente novamente.');
+  return data;
+}
+
+export async function cancelPatientAppointment(id, token) {
+  const data = await apiRequest(`/api/usuario/agendamentos/${encodeURIComponent(id)}/cancelar`, { method: 'PATCH', token });
+  if (!data?.agendamento?.id || data.agendamento.status !== 'cancelado') throw new ApiError('Não foi possível confirmar o cancelamento. Tente novamente.');
+  return data.agendamento;
+}
+
+export function getPatientAccount(token, options = {}) {
+  return apiRequest('/api/pacientes/me', { method: 'GET', token, ...options });
+}
+
+export async function getAgendaAvailability(date, token, options = {}) {
+  const data = await apiRequest(`/api/agenda?${new URLSearchParams({ data: date })}`, { method: 'GET', token, ...options });
+  if (!['recorrentes', 'extras', 'bloqueios', 'horarios'].every((key) => Array.isArray(data?.[key]))) {
+    throw new ApiError('Não foi possível ler os horários da agenda. Tente novamente.');
+  }
+  return data;
+}
+
+export function saveAgendaPeriod(resource, id, details, token) {
+  return apiRequest(`/api/agenda/${resource}${id ? `/${encodeURIComponent(id)}` : ''}`, {
+    method: id ? 'PATCH' : 'POST', body: details, token,
+  });
+}
+
+export function deleteAgendaPeriod(resource, id, token) {
+  return apiRequest(`/api/agenda/${resource}/${encodeURIComponent(id)}`, { method: 'DELETE', token });
 }

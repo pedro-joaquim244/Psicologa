@@ -1,11 +1,11 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { bookingDateLabel, dateFromKey, localDateKey } from '../../utils/scheduling';
+import { bookingDateLabel, clinicDateKey, dateFromKey, localDateKey } from '../../utils/scheduling';
 
 const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 export default function BookingCalendar({ selected, onSelect, disabled }) {
-  const today = localDateKey();
-  const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12));
+  const today = clinicDateKey();
+  const [month, setMonth] = useState(() => { const date = dateFromKey(today); date.setDate(1); return date; });
   const [focusDate, setFocusDate] = useState(today);
   const focusPending = useRef(false);
   const gridRef = useRef(null);

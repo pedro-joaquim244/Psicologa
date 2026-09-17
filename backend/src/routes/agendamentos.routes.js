@@ -6,27 +6,29 @@ import {
   somentePsicologa,
   somentePaciente,
 } from "../middlewares/autenticacao.js";
+import { bookingLimiter, writeLimiter } from '../middlewares/limitAuth.js';
 
+import { clinicNow, generateSlots, validDate, validId, validTime } from '../utils/scheduling.js';
+import { loadDayAvailability, loadDayBlocks, overlaps } from '../services/agenda.js';
 const router = express.Router();
+router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+router.param('id', (req, res, next, id) => validId(id) ? next() : res.status(400).json({ erro: 'Agendamento inválido.' }));
+
+async function statusConflict(res, id, profissionalId = null) {
+  // A professional must not learn that another professional has an appointment
+  // at a guessed ID. Administrators retain the more specific conflict response.
+  const query = profissionalId == null
+    ? 'SELECT id FROM agendamentos WHERE id = ? LIMIT 1'
+    : 'SELECT id FROM agendamentos WHERE id = ? AND profissional_id = ? LIMIT 1';
+  const params = profissionalId == null ? [id] : [id, profissionalId];
+  const [[current]] = await db.query(query, params);
+  return res.status(current ? 409 : 404).json({ erro: current ? 'O status deste agendamento mudou. Atualize a agenda antes de tentar novamente.' : 'Agendamento não encontrado.' });
+}
 
 
 // =====================================================
 // FUNÇÕES AUXILIARES
 // =====================================================
-
-function horaParaMinutos(hora) {
-  const [h, m] = hora.split(":").map(Number);
-
-  return h * 60 + m;
-}
-
-function minutosParaHora(minutos) {
-  const hora = Math.floor(minutos / 60);
-  const minuto = minutos % 60;
-
-  return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
-}
-
 
 // =====================================================
 // CRIAR AGENDAMENTO
@@ -36,7 +38,7 @@ function minutosParaHora(minutos) {
 // Reserva vinculada à conta autenticada do paciente.
 // =====================================================
 
-router.post("/", autenticarToken, somentePaciente, async (req, res) => {
+router.post("/", autenticarToken, somentePaciente, bookingLimiter, async (req, res) => {
   let conexao;
 
   try {
@@ -47,7 +49,7 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
       horario,
       modalidade,
       profissional_id = 1,
-    } = req.body;
+    } = req.body || {};
     const { nome, email, telefone } = req.paciente;
 
 
@@ -75,141 +77,45 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
     }
 
 
-    const dataJS = new Date(`${data}T12:00:00`);
-
-    if (Number.isNaN(dataJS.getTime())) {
-      return res.status(400).json({
-        erro: "Data inválida.",
-      });
+    if (!validDate(data) || !validTime(horario) || !validId(profissional_id)) {
+      return res.status(400).json({ erro: 'Confira a data, o horário e o profissional.' });
     }
-
-
-    const diaSemana = dataJS.getDay();
-
+    if (data + ' ' + horario + ':00' <= clinicNow()) {
+      return res.status(400).json({ erro: 'Esse horário já passou. Escolha outro horário.' });
+    }
+    await conexao.beginTransaction();
+    // Lock persistente no banco: cobre instâncias diferentes da API e intervalos
+    // sobrepostos, mesmo quando seus horários de início são diferentes.
+    const [[profissional]] = await conexao.query('SELECT id FROM profissionais WHERE id = ? AND ativo = 1 FOR UPDATE', [profissional_id]);
+    if (!profissional) {
+      await conexao.rollback();
+      return res.status(400).json({ erro: 'Profissional indisponível.' });
+    }
 
     // ===================================================
     // BUSCAR DISPONIBILIDADE DA PSICÓLOGA
     // ===================================================
 
-    const [disponibilidades] = await conexao.query(
-      `
-      SELECT
-        hora_inicio,
-        hora_fim,
-        duracao_minutos,
-        intervalo_minutos
-      FROM disponibilidades
-      WHERE profissional_id = ?
-        AND dia_semana = ?
-        AND ativo = 1
-      ORDER BY hora_inicio
-      `,
-      [
-        profissional_id,
-        diaSemana,
-      ]
-    );
+    const disponibilidades = await loadDayAvailability(conexao, data, profissional_id);
 
 
-    const horarioMinutos = horaParaMinutos(horario);
-
-    let disponibilidadeEncontrada = null;
-
-
-    for (const disponibilidade of disponibilidades) {
-      const inicio = horaParaMinutos(
-        disponibilidade.hora_inicio
-      );
-
-      const fim = horaParaMinutos(
-        disponibilidade.hora_fim
-      );
-
-      const duracao = Number(
-        disponibilidade.duracao_minutos
-      );
-
-      const intervalo = Number(
-        disponibilidade.intervalo_minutos
-      );
-
-
-      for (
-        let atual = inicio;
-        atual + duracao <= fim;
-        atual += duracao + intervalo
-      ) {
-        if (atual === horarioMinutos) {
-          disponibilidadeEncontrada =
-            disponibilidade;
-
-          break;
-        }
-      }
-
-
-      if (disponibilidadeEncontrada) {
-        break;
-      }
+    const slot = generateSlots(disponibilidades).find((item) => item.horario === horario);
+    if (!slot) {
+      await conexao.rollback();
+      return res.status(400).json({ erro: 'Este horário não está disponível.' });
     }
-
-
-    if (!disponibilidadeEncontrada) {
-      return res.status(400).json({
-        erro: "Este horário não está disponível.",
-      });
-    }
-
-
-    // ===================================================
-    // CALCULAR HORÁRIO FINAL
-    // ===================================================
-
-    const duracao = Number(
-      disponibilidadeEncontrada.duracao_minutos
-    );
-
-    const horarioFim = minutosParaHora(
-      horarioMinutos + duracao
-    );
-
-
-    const inicioCompleto =
-      `${data} ${horario}:00`;
-
-    const fimCompleto =
-      `${data} ${horarioFim}:00`;
-
-
-    // ===================================================
-    // INICIAR TRANSAÇÃO
-    // ===================================================
-
-    await conexao.beginTransaction();
-
+    const horarioFim = slot.fim;
+    const inicioCompleto = data + ' ' + horario + ':00';
+    const fimCompleto = data + ' ' + horarioFim + ':00';
 
     // ===================================================
     // VERIFICAR BLOQUEIOS
     // ===================================================
 
-    const [bloqueios] = await conexao.query(
-      `
-      SELECT id
-      FROM bloqueios_agenda
-      WHERE profissional_id = ?
-        AND inicio < ?
-        AND fim > ?
-      LIMIT 1
-      `,
-      [
-        profissional_id,
-        fimCompleto,
-        inicioCompleto,
-      ]
-    );
+    const bloqueios = await loadDayBlocks(conexao, data, profissional_id);
 
 
-    if (bloqueios.length > 0) {
+    if (bloqueios.some((block) => overlaps(inicioCompleto, fimCompleto, block.inicio, block.fim))) {
       await conexao.rollback();
 
       return res.status(409).json({
@@ -324,7 +230,7 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
     }
 
 
-    if (error.code === "ER_DUP_ENTRY") {
+    if (["ER_DUP_ENTRY", "ER_LOCK_DEADLOCK", "ER_LOCK_WAIT_TIMEOUT"].includes(error.code)) {
       return res.status(409).json({
         erro: "Este horário já foi reservado.",
       });
@@ -339,11 +245,11 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
 
     return res.status(500).json({
       erro: "Erro ao realizar agendamento.",
-      detalhe: error.message,
     });
 
   } finally {
     if (conexao) {
+      try { await conexao.rollback(); } catch { /* Conexão encerrada. */ }
       conexao.release();
     }
   }
@@ -365,26 +271,12 @@ router.get(
 
   async (req, res) => {
     try {
-      const [agendamentos] = await db.query(
-        `
-        SELECT
-          id,
-          profissional_id,
-          nome_cliente,
-          email_cliente,
-          telefone_cliente,
-          modalidade,
-          inicio,
-          fim,
-          status,
-          google_event_id,
-          origem,
-          criado_em,
-          atualizado_em
-        FROM agendamentos
-        ORDER BY inicio ASC
-        `
-      );
+      const profId = req.profissional_id || (req.query.profissional_id ? Number(req.query.profissional_id) : null);
+      const query = profId
+        ? `SELECT id, profissional_id, nome_cliente, email_cliente, telefone_cliente, modalidade, inicio, fim, status, google_event_id, origem, criado_em, atualizado_em FROM agendamentos WHERE profissional_id = ? ORDER BY inicio ASC`
+        : `SELECT id, profissional_id, nome_cliente, email_cliente, telefone_cliente, modalidade, inicio, fim, status, google_event_id, origem, criado_em, atualizado_em FROM agendamentos ORDER BY inicio ASC`;
+      const params = profId ? [profId] : [];
+      const [agendamentos] = await db.query(query, params);
 
 
       return res.status(200).json(
@@ -424,28 +316,12 @@ router.get(
       const { id } = req.params;
 
 
-      const [agendamentos] = await db.query(
-        `
-        SELECT
-          id,
-          profissional_id,
-          nome_cliente,
-          email_cliente,
-          telefone_cliente,
-          modalidade,
-          inicio,
-          fim,
-          status,
-          google_event_id,
-          origem,
-          criado_em,
-          atualizado_em
-        FROM agendamentos
-        WHERE id = ?
-        LIMIT 1
-        `,
-        [id]
-      );
+      const isSuperAdmin = req.usuario.tipo === "admin";
+      const query = isSuperAdmin
+        ? `SELECT id, profissional_id, nome_cliente, email_cliente, telefone_cliente, modalidade, inicio, fim, status, google_event_id, origem, criado_em, atualizado_em FROM agendamentos WHERE id = ? LIMIT 1`
+        : `SELECT id, profissional_id, nome_cliente, email_cliente, telefone_cliente, modalidade, inicio, fim, status, google_event_id, origem, criado_em, atualizado_em FROM agendamentos WHERE id = ? AND profissional_id = ? LIMIT 1`;
+      const params = isSuperAdmin ? [id] : [id, req.profissional_id];
+      const [agendamentos] = await db.query(query, params);
 
 
       if (agendamentos.length === 0) {
@@ -486,29 +362,22 @@ router.patch(
   "/:id/confirmar",
   autenticarToken,
   somentePsicologa,
+  writeLimiter,
 
   async (req, res) => {
     try {
       const { id } = req.params;
 
 
-      const [resultado] = await db.query(
-        `
-        UPDATE agendamentos
-        SET status = 'confirmado'
-        WHERE id = ?
-          AND status = 'agendado'
-        `,
-        [id]
-      );
+      const isSuperAdmin = req.usuario.tipo === "admin";
+      const query = isSuperAdmin
+        ? `UPDATE agendamentos SET status = 'confirmado' WHERE id = ? AND status = 'agendado'`
+        : `UPDATE agendamentos SET status = 'confirmado' WHERE id = ? AND status = 'agendado' AND profissional_id = ?`;
+      const params = isSuperAdmin ? [id] : [id, req.profissional_id];
+      const [resultado] = await db.query(query, params);
 
 
-      if (resultado.affectedRows === 0) {
-        return res.status(404).json({
-          erro:
-            "Agendamento não encontrado ou não pode ser confirmado.",
-        });
-      }
+      if (resultado.affectedRows === 0) return statusConflict(res, id, isSuperAdmin ? null : req.profissional_id);
 
 
       return res.status(200).json({
@@ -543,29 +412,22 @@ router.patch(
   "/:id/concluir",
   autenticarToken,
   somentePsicologa,
+  writeLimiter,
 
   async (req, res) => {
     try {
       const { id } = req.params;
 
 
-      const [resultado] = await db.query(
-        `
-        UPDATE agendamentos
-        SET status = 'concluido'
-        WHERE id = ?
-          AND status IN ('agendado', 'confirmado')
-        `,
-        [id]
-      );
+      const isSuperAdmin = req.usuario.tipo === "admin";
+      const query = isSuperAdmin
+        ? `UPDATE agendamentos SET status = 'concluido' WHERE id = ? AND status IN ('agendado', 'confirmado')`
+        : `UPDATE agendamentos SET status = 'concluido' WHERE id = ? AND status IN ('agendado', 'confirmado') AND profissional_id = ?`;
+      const params = isSuperAdmin ? [id] : [id, req.profissional_id];
+      const [resultado] = await db.query(query, params);
 
 
-      if (resultado.affectedRows === 0) {
-        return res.status(404).json({
-          erro:
-            "Agendamento não encontrado ou não pode ser concluído.",
-        });
-      }
+      if (resultado.affectedRows === 0) return statusConflict(res, id, isSuperAdmin ? null : req.profissional_id);
 
 
       return res.status(200).json({
@@ -600,29 +462,22 @@ router.patch(
   "/:id/cancelar",
   autenticarToken,
   somentePsicologa,
+  writeLimiter,
 
   async (req, res) => {
     try {
       const { id } = req.params;
 
 
-      const [resultado] = await db.query(
-        `
-        UPDATE agendamentos
-        SET status = 'cancelado'
-        WHERE id = ?
-          AND status != 'cancelado'
-        `,
-        [id]
-      );
+      const isSuperAdmin = req.usuario.tipo === "admin";
+      const query = isSuperAdmin
+        ? `UPDATE agendamentos SET status = 'cancelado' WHERE id = ? AND status != 'cancelado'`
+        : `UPDATE agendamentos SET status = 'cancelado' WHERE id = ? AND status != 'cancelado' AND profissional_id = ?`;
+      const params = isSuperAdmin ? [id] : [id, req.profissional_id];
+      const [resultado] = await db.query(query, params);
 
 
-      if (resultado.affectedRows === 0) {
-        return res.status(404).json({
-          erro:
-            "Agendamento não encontrado ou já está cancelado.",
-        });
-      }
+      if (resultado.affectedRows === 0) return statusConflict(res, id, isSuperAdmin ? null : req.profissional_id);
 
 
       return res.status(200).json({

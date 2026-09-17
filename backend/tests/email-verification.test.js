@@ -80,6 +80,7 @@ test('professional access also requires verification and records the confirmed e
   assert.equal(claims.email_verificado, true);
   const [[user]] = await connection.query('SELECT email_verificado_em FROM usuarios_admin WHERE id = 1');
   assert.ok(user.email_verificado_em);
+  await assert.rejects(verification.issue('profissional', 1), /já foi confirmado/);
 });
 
 test('resend invalidates old challenge, preserves attempts and respects cooldown', async () => {
@@ -119,8 +120,8 @@ test('SMTP failure rolls back challenge, allowing retry without bypass', async (
   assert.equal(messages.length, 1);
 });
 
-test('send limits survive new logins and reset after the window', async () => {
-  for (let i = 0; i < 5; i++) { await verification.issue('paciente', 1); time += 61000; }
+test('send limits survive new requests and reset after the window', async () => {
+  for (let i = 0; i < 3; i++) { await verification.issue('paciente', 1); time += 61000; }
   await assert.rejects(verification.issue('paciente', 1), /Limite/);
   time += 15 * 60000;
   await verification.issue('paciente', 1);

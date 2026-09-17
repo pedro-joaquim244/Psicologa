@@ -8,7 +8,7 @@
 .hero-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-md); margin-top: var(--space-md); }
 .hero-actions .button { font-size: var(--fs-small); }
 .hero-photo { position: absolute; z-index: 1; left: 55%; top: 20%; width: calc(45% - max(var(--gutter), (100% - var(--container)) / 2)); height: 65%; background: var(--paper-dark); transform-origin: center; overflow: hidden; }
-.hero-photo img { object-position: 43% center; }
+.hero-photo { border-radius: 20px; }
 .hero-photo-shade { position: absolute; inset: 0; background: var(--forest); opacity: 0; }
 .hero-badge { position: absolute; z-index: 3; left: calc(55% - 64px); bottom: 12%; width: 132px; border-radius: 50%; background: var(--paper); padding: 5px; }
 .photo-note { position: absolute; top: calc(85% + 12px); right: max(var(--gutter), calc((100% - var(--container)) / 2)); font-family: var(--serif); font-size: 1.1rem; font-style: italic; color: var(--muted); }
@@ -34,7 +34,7 @@
   .hero-copy { position: relative; width: auto; left: auto; top: auto; }
   .hero h1 { font-size: clamp(3.2rem, 7.4vw, 5.5rem); }
   .hero-eyebrow { font-size: .55rem; gap: 8px; letter-spacing: .1em; }
-  .hero-photo { position: relative; left: auto; top: auto; width: 100%; height: 530px; }
+  .hero-photo { position: relative; left: auto; top: auto; width: 100%; height: auto; aspect-ratio: 4 / 5; }
   .hero-badge { display: none; }
   .photo-note { position: static; grid-column: 2; text-align: right; margin-top: var(--space-sm); font-size: 1rem; }
   .hero-meta { position: static; grid-column: 1 / -1; margin-top: var(--space-lg); padding-top: var(--space-md); border-top: var(--border-rule); }
@@ -43,10 +43,10 @@
 @media (max-width: 650px) {
   .hero { display: flex; flex-direction: column; align-items: stretch; padding-top: 128px; }
   .hero h1 { font-size: var(--fs-display-xl); }
-  .hero-eyebrow { line-height: 1.8; margin-bottom: var(--space-md); font-size: .5rem; }
+  .hero-eyebrow { line-height: 1.8; margin-bottom: var(--space-md); font-size: .625rem; }
   .hero-description { margin-top: var(--space-md); max-width: 340px; }
   .hero-actions { gap: 8px var(--space-md); }
-  .hero-photo { height: 420px; margin-top: var(--space-lg); }
+  .hero-photo { height: auto; aspect-ratio: 4 / 3; margin-top: var(--space-lg); }
   .hero-meta { gap: var(--space-sm); align-items: center; }
   .hero-meta > span { max-width: 185px; line-height: 2; }
   .hero-meta a { font-size: 0; }

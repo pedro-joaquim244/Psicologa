@@ -9,3 +9,8 @@ playwright-report/
 .env
 .env.*
 !.env.example
+
+.vercel
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
+.playwright/

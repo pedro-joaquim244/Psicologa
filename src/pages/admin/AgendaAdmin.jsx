@@ -5,6 +5,7 @@ import AgendaFilters from "../../components/admin/AgendaFilters";
 import AppointmentItem from "../../components/admin/AppointmentItem";
 import ConfirmationModal from "../../components/admin/ConfirmationModal";
 import AgendaSummary from "../../components/admin/AgendaSummary";
+import AgendaAvailability from '../../components/admin/AgendaAvailability';
 import { AdminToast, EmptyAgenda, ErrorAgenda, LoadingAgenda } from "../../components/admin/AdminFeedback";
 import FloralMark from "../../components/Shared/FloralMark";
 import { useAuth } from "../../context/AuthContext";
@@ -30,7 +31,9 @@ export default function AgendaAdmin() {
   const [filters, setFilters] = useState(initialFilters);
   const [busy, setBusy] = useState({ id: null, action: null });
   const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelError, setCancelError] = useState('');
   const [toast, setToast] = useState(null);
+  const [view, setView] = useState('atendimentos');
   const actionPending = useRef(false);
 
   const loadAgenda = useCallback(async (signal) => {
@@ -54,7 +57,7 @@ export default function AgendaAdmin() {
   }, [loadAgenda]);
 
   useEffect(() => {
-    if (!toast) return undefined;
+    if (!toast || toast.tone === "error") return undefined;
     const timeout = window.setTimeout(() => setToast(null), 4500);
     return () => window.clearTimeout(timeout);
   }, [toast]);
@@ -82,6 +85,7 @@ export default function AgendaAdmin() {
     if (actionPending.current) return;
     actionPending.current = true;
     setBusy({ id: appointment.id, action });
+    setCancelError('');
     try {
       const response = await updateAppointmentStatus(appointment.id, action, token);
       const updated = normalizeUpdatedAppointment(response, appointment, action);
@@ -89,7 +93,9 @@ export default function AgendaAdmin() {
       setToast({ message: actionSuccess[action], tone: "success" });
       if (action === "cancelar") setCancelTarget(null);
     } catch (requestError) {
-      if (requestError.status !== 401) setToast({ message: requestError.message, tone: "error" });
+      if (action === 'cancelar') setCancelError(requestError.message);
+      if (requestError.status !== 401 && action !== 'cancelar') setToast({ message: requestError.message, tone: "error" });
+      if (requestError.status === 409) await loadAgenda();
     } finally {
       actionPending.current = false;
       setBusy({ id: null, action: null });
@@ -101,7 +107,7 @@ export default function AgendaAdmin() {
     navigate("/adm/login", { replace: true });
   };
 
-  const closeCancelModal = useCallback(() => setCancelTarget(null), []);
+  const closeCancelModal = useCallback(() => { setCancelTarget(null); setCancelError(''); }, []);
 
   return (
     <main className="admin-page agenda-page">
@@ -110,19 +116,20 @@ export default function AgendaAdmin() {
       <div className="admin-container agenda-content">
         <section className="agenda-hero" aria-labelledby="agenda-title"><div><span className="admin-kicker">AGENDA · ÁREA RESERVADA</span><h1 id="agenda-title">Olá, {getGreetingName(user?.nome)}.</h1><p>Acompanhe e organize seus próximos atendimentos.</p></div><div className="agenda-date"><FloralMark /><span>{new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(new Date())}</span></div></section>
 
-        {!loading && !error && <AgendaSummary summary={summary} />}
-        {!loading && !error && <AgendaFilters filters={filters} onChange={setFilters} resultCount={filteredAppointments.length} />}
+        <AgendaAvailability view={view} onViewChange={setView} appointments={appointments} onAppointmentsChange={loadAgenda} />
+        {view === 'atendimentos' && !loading && !error && <AgendaSummary summary={summary} />}
+        {view === 'atendimentos' && !loading && !error && <AgendaFilters filters={filters} onChange={setFilters} resultCount={filteredAppointments.length} />}
 
-        <section className="appointments-section" aria-label="Lista de agendamentos">
+        {view === 'atendimentos' && <section className="appointments-section" aria-label="Lista de agendamentos">
           {loading && <LoadingAgenda />}
           {!loading && error && <ErrorAgenda message={error} onRetry={() => loadAgenda()} />}
           {!loading && !error && !filteredAppointments.length && <EmptyAgenda filtered={appointments.length > 0} onClear={() => setFilters(initialFilters)} />}
           {!loading && !error && filteredAppointments.map((appointment) => <AppointmentItem key={appointment.id} appointment={appointment} disabled={Boolean(busy.action)} busyAction={busy.id === appointment.id ? busy.action : null} onAction={runAction} onCancel={setCancelTarget} />)}
-        </section>
+        </section>}
       </div>
 
       <footer className="admin-footer"><div className="admin-container"><span>HELENA MARTINS · PSICOLOGIA & ESCUTA</span><span>Sessão protegida por autenticação.</span></div></footer>
-      <ConfirmationModal appointment={cancelTarget} busy={busy.id === cancelTarget?.id && busy.action === "cancelar"} onClose={closeCancelModal} onConfirm={() => runAction(cancelTarget, "cancelar")} />
+      <ConfirmationModal error={cancelError} appointment={cancelTarget} busy={busy.id === cancelTarget?.id && busy.action === "cancelar"} onClose={closeCancelModal} onConfirm={() => runAction(cancelTarget, "cancelar")} />
       <AdminToast message={toast?.message} tone={toast?.tone} onClose={() => setToast(null)} />
     </main>
   );

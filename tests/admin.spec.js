@@ -41,12 +41,12 @@ async function mockAuthenticatedSession(page) {
 }
 
 async function mockApi(page, records = appointments) {
-  await page.route('http://localhost:3333/api/**', async (route) => {
+  await page.route('**/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
 
     if (url.pathname === '/api/auth/login') {
-      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ verificacaoPendente: true, desafio: 'a'.repeat(64), email: 'psicologa@email.com', expiraEm: Date.now() + 600000, reenviarEm: Date.now() + 60000 }) });
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ mensagem: 'Login realizado com sucesso!', token: 'token-de-teste', usuario: { id: 7, nome: 'Helena Martins', email: 'psicologa@email.com', tipo: 'admin', email_verificado: true } }) });
     }
     if (url.pathname === '/api/auth/verificar-email') {
       await route.fulfill({
@@ -84,9 +84,6 @@ test('protege a agenda e autentica mantendo a sessão', async ({ page }) => {
   await page.getByLabel('E-mail').fill('psicologa@email.com');
   await page.getByLabel('Senha', { exact: true }).fill('123456');
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
-  expect(await page.evaluate(() => localStorage.getItem('psicologa_token'))).toBeNull();
-  await page.getByLabel('Código de verificação').fill('123456');
-  await page.getByRole('button', { name: 'Confirmar e entrar' }).click();
 
   await expect(page).toHaveURL(/\/adm\/agenda$/);
   await expect(page.getByRole('heading', { name: 'Olá, Helena.' })).toBeVisible();
@@ -142,7 +139,7 @@ test('confirma e cancela agendamentos com retorno visual', async ({ page }, test
 
 test('limpa a sessão quando a API informa token expirado', async ({ page }) => {
   await mockAuthenticatedSession(page);
-  await page.route('http://localhost:3333/api/agendamentos', (route) => route.fulfill({
+  await page.route('**/api/agendamentos', (route) => route.fulfill({
     status: 401,
     contentType: 'application/json',
     body: JSON.stringify({ mensagem: 'Sessão expirada' }),
@@ -160,7 +157,7 @@ test('oferece nova tentativa e apresenta a agenda vazia', async ({ page }, testI
   test.skip(testInfo.project.name !== 'desktop', 'Estados auxiliares executados uma vez.');
   await mockAuthenticatedSession(page);
   let attempts = 0;
-  await page.route('http://localhost:3333/api/agendamentos', async (route) => {
+  await page.route('**/api/agendamentos', async (route) => {
     attempts += 1;
     if (attempts === 1) {
       await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Falha temporária' }) });

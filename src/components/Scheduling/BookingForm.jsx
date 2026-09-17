@@ -4,7 +4,7 @@ export default function BookingForm({ date, slot, values, onChange, errors, subm
   const fields = [
     { name: 'nome', label: 'Nome completo', autoComplete: 'name', type: 'text', placeholder: 'Como podemos chamar você?' },
     { name: 'telefone', label: 'WhatsApp', autoComplete: 'tel', type: 'tel', placeholder: '(16) 99999-9999' },
-    { name: 'email', label: 'E-mail (opcional)', autoComplete: 'email', type: 'email', placeholder: 'seu@email.com' },
+    { name: 'email', label: 'E-mail', autoComplete: 'email', type: 'email', placeholder: 'seu@email.com' },
   ];
   return (
     <form className="booking-form" onSubmit={onSubmit} noValidate>
@@ -13,7 +13,7 @@ export default function BookingForm({ date, slot, values, onChange, errors, subm
         <div className="booking-fields">
           {fields.map(({ name, label, ...input }) => <div className="booking-field" key={name}>
             <label htmlFor={`booking-${name}`}>{label}</label>
-            <input {...input} id={`booking-${name}`} name={name} value={values[name]} readOnly aria-describedby="booking-account-note" />
+            <input {...input} id={`booking-${name}`} name={name} value={values[name]} readOnly aria-invalid={Boolean(errors[name])} aria-describedby={`booking-account-note${errors[name] ? ` booking-error-${name}` : ''}`} />
             {errors[name] && <span id={`booking-error-${name}`} className="booking-field-error">{errors[name]}</span>}
           </div>)}
         </div>

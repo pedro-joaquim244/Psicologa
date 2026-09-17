@@ -9,7 +9,7 @@ const root = resolve('dist');
 const base = '/Psicologa/';
 const fallback = await readFile(resolve(root, '404.html'));
 assert.match(fallback.toString(), /\/Psicologa\/assets\//, 'Execute npm run build:pages primeiro.');
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff' };
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
   if (!pathname.startsWith(base)) { res.writeHead(404); res.end(); return; }
@@ -33,7 +33,7 @@ try {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(`${origin}${base}`);
-  await page.getByRole('link', { name: 'Agendar uma conversa', exact: true }).click();
+  await page.locator('#inicio').getByRole('link', { name: 'Agendar uma conversa', exact: true }).click();
   assert.equal(new URL(page.url()).hash, '#agendamento');
   await page.locator('#booking-title').waitFor({ state: 'visible' });
   assert.equal(await page.getByRole('link', { name: 'Área profissional' }).getAttribute('href'), '/Psicologa/adm/login');
@@ -55,8 +55,25 @@ try {
   await page.goto(`${origin}${base}adm/agenda`);
   await page.getByRole('heading', { name: 'Ainda não há atendimentos.' }).waitFor();
   assert.equal(new URL(page.url()).pathname, '/Psicologa/adm/agenda');
+  await page.goto(`${origin}${base}minhas-consultas`);
+  await page.waitForURL('**/Psicologa/login');
+  await page.evaluate(() => {
+    localStorage.setItem('paciente_token', 'patient-pages');
+    localStorage.setItem('paciente_usuario', JSON.stringify({ nome: 'Joaquim Sousa', tipo: 'paciente', email: 'joaquim@example.com' }));
+  });
+  await page.route('**/api/usuario/agendamentos', (route) => route.fulfill({ json: [] }));
+  const patientDirect = await page.goto(`${origin}${base}minhas-consultas`);
+  assert.equal(patientDirect.status(), 404);
+  await page.getByText('Você ainda não possui consultas agendadas.').waitFor();
+  await page.reload();
+  await page.getByText('Você ainda não possui consultas agendadas.').waitFor();
+  assert.equal(await page.locator('.patient-intro').getByRole('link', { name: 'Agendar uma conversa' }).getAttribute('href'), '/Psicologa/#agendamento');
+  await page.locator('.patient-intro').getByRole('link', { name: 'Agendar uma conversa' }).click();
+  await page.locator('#booking-title').waitFor();
+  assert.equal(new URL(page.url()).pathname, '/Psicologa/');
+  assert.equal(new URL(page.url()).hash, '#agendamento');
   assert.deepEqual(errors, []);
-  console.log('Pages aprovado: landing, âncora, assets, rodapé, rotas diretas com 404.html e agenda protegida.');
+  console.log('Pages aprovado: landing, âncora, assets, rodapé, rotas diretas com 404.html, agenda e consultas protegidas.');
 } finally {
   await browser?.close();
   server.closeAllConnections();

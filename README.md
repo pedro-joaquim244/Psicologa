@@ -11,7 +11,7 @@ npm run dev
 
 O frontend fica em `http://localhost:5173`. A API deve estar ativa em `http://localhost:3333`.
 
-O Vite mantém essa origem com `strictPort`. O backend atual autoriza `http://localhost:5173` no CORS; usar `127.0.0.1` ou outra porta exige ajustar `FRONTEND_URL` no ambiente do backend. O comando `preview` serve para conferir o build; para testar contra a API real, use a origem autorizada.
+O Vite mantém essa origem com `strictPort`. Configure `FRONTEND_URL` com as origens exatas autorizadas, separadas por vírgula quando necessário. Se a variável não existir, apenas em desenvolvimento a API aceita localhost e 127.0.0.1 nas portas 5173 e 4173. Em produção nenhuma origem externa é liberada por padrão. Para testar o preview contra a API local, defina `VITE_API_URL=http://localhost:3333` antes do build e autorize a origem do preview em `FRONTEND_URL`.
 
 Para gerar e conferir a versão de produção:
 
@@ -25,7 +25,21 @@ npm run preview
 - `/adm/login`: autenticação da psicóloga;
 - `/adm/agenda`: agenda protegida, resumo, filtros e ações de confirmar, concluir e cancelar.
 
-O link discreto **Área profissional** fica na linha inferior do rodapé existente. As credenciais de desenvolvimento fornecidas são `psicologa@email.com` e `123456`.
+### Gestão de disponibilidade
+
+A rotina semanal usa os endpoints administrativos já existentes. `GET /api/agenda?data=AAAA-MM-DD` devolve os períodos recorrentes, extras, bloqueios e `proximas_excecoes` (somente para a psicóloga autenticada). O atalho de criação rápida envia uma única requisição para `POST /api/agenda/disponibilidades/lote`:
+
+```json
+{
+  "tipo": "recorrente",
+  "dias_semana": [1, 2, 3, 4, 5],
+  "periodos": [{ "hora_inicio": "08:00", "hora_fim": "12:00", "duracao_minutos": 50, "intervalo_minutos": 10 }]
+}
+```
+
+A resposta informa `criados` e `ignorados`; repetições são ignoradas sem gerar duplicatas. Cópias e ações em massa reutilizam `POST /api/agenda/disponibilidades/copiar` e `POST /api/agenda/disponibilidades/acoes`. As alterações continuam protegidas por transação, lock do profissional e validações que preservam consultas já marcadas.
+
+O link discreto **Área profissional** fica na linha inferior do rodapé existente. Não há credenciais padrão. Para provisionar uma conta, defina `ADMIN_NAME`, `ADMIN_EMAIL` e `ADMIN_PASSWORD` no ambiente e execute `node src/criar-admin.js` dentro de `backend/`. A senha exige pelo menos 12 caracteres e no máximo 72 bytes. O script não sobrescreve contas existentes, não imprime senhas e envia o código da confirmação inicial. Se o SMTP falhar depois da criação, entre com a conta e use **Reenviar código**. Se uma instalação ainda usa a senha de demonstração antiga, altere-a antes de publicar.
 
 ## Agendamento público
 
@@ -40,9 +54,17 @@ A seção `#agendamento` fica entre o FAQ e o contato final. Os CTAs do hero, me
 
 A landing não consulta nem exibe a lista de pacientes. Os dados básicos da própria conta ficam na sessão do navegador.
 
-O token e os dados básicos do usuário ficam em `localStorage`, nas chaves `psicologa_token` e `psicologa_usuario`. A senha nunca é armazenada. Todas as requisições administrativas enviam o JWT no cabeçalho `Authorization`; uma resposta `401` limpa a sessão e retorna ao login.
+O token e os dados básicos ficam em `localStorage`: `psicologa_token` / `psicologa_usuario` para a profissional e `paciente_token` / `paciente_usuario` para o paciente. A senha nunca é armazenada. As requisições privadas enviam o JWT em `Authorization`; uma resposta `401` remove somente a sessão correspondente ao token rejeitado. Sessões antigas de paciente são migradas automaticamente para suas próprias chaves.
 
-A URL da API é centralizada em `src/services/api.js`. Para apontar para outro endereço, copie `.env.example` para `.env.local` e altere:
+## Área do paciente
+
+No cabeçalho existente, clique no nome do paciente e em **Minhas consultas**. No celular, abra primeiro o menu principal. `/minhas-consultas` oferece filtros instantâneos, detalhes e cancelamento com confirmação; `/minha-conta` mostra os dados da própria conta. As duas páginas exigem login de paciente e preservam o destino após a autenticação.
+
+`GET /api/usuario/agendamentos` e `PATCH /api/usuario/agendamentos/:id/cancelar` reutilizam os middlewares de JWT e validação da conta. Toda consulta SQL inclui `paciente_id = req.usuario.id`. O banco já possui essa chave estrangeira; novas reservas já a preenchem usando a conta autenticada. Registros antigos sem vínculo não são associados por nome ou e-mail.
+
+Não há migração nova nem dependência adicional. O cancelamento mantém a regra administrativa existente (qualquer status diferente de `cancelado`, sem prazo de antecedência), conserva o histórico e libera a disponibilidade conforme as regras atuais. Os detalhes não exibem links de videochamada inexistentes. Consulte [a entrega e o roteiro de testes](docs/area-paciente.md).
+
+A URL da API é centralizada em `src/services/api.js`. Em desenvolvimento há fallback para localhost; builds de produção sem `VITE_API_URL` usam a mesma origem do frontend. Requisições têm limite de 30 segundos e não são repetidas automaticamente. Para apontar para outro endereço, copie `.env.example` para `.env.local` e altere:
 
 ```env
 VITE_API_URL=http://localhost:3333
@@ -50,19 +72,41 @@ VITE_API_URL=http://localhost:3333
 
 ## Confirmação de e-mail
 
-O cadastro de paciente e cada login (paciente ou profissional) exigem senha e um código enviado ao e-mail da conta. A resposta inicial não contém JWT; a sessão só é criada após confirmar o código. A data `email_verificado_em` fica registrada no banco para uso em futuras notificações. Isso confirma o acesso ao endereço naquele momento; não implementa o envio dessas notificações.
+O código por e-mail é exigido uma única vez, na criação da conta. O cadastro do paciente e o provisionamento de uma conta profissional criam a conta com `email_verificado_em = NULL`, enviam o código e só liberam a sessão após a confirmação. Depois que `email_verificado_em` é preenchido, os logins seguintes validam e-mail e senha e retornam o JWT imediatamente, sem criar ou enviar outro desafio.
 
-No backend, instale as dependências com `npm install` e execute `npm run migrate` antes de iniciar a API. A migração é aditiva e pode ser repetida: cria a tabela de desafios e acrescenta a data de verificação às contas existentes. Sessões antigas precisam de novo login.
+Uma conta ainda não confirmada recebe `HTTP 403` com `codigo: "EMAIL_NAO_VERIFICADO"`; nenhuma sessão é criada e nenhum e-mail é enviado automaticamente pelo login. Se já existir um desafio pendente, a tela permite usar o código recebido. Caso contrário, **Reenviar código** faz uma nova requisição protegida pela senha e pelos limites existentes.
+
+No backend, instale as dependências com `npm install` e execute `npm run migrate` antes de iniciar a API. A migração é aditiva e pode ser repetida: prepara as tabelas-base em uma instalação nova, cria a tabela de desafios, acrescenta a data de verificação às contas existentes e atualiza a estrutura da agenda (horários extras e bloqueios semanais). Em instalações que já executaram a migração de contas, `npm run migrate:agenda` aplica somente a estrutura-base e a parte da agenda. Sessões antigas precisam de novo login.
 
 Adicione ao `backend/.env` as variáveis de `backend/.env.example`: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_FROM`. Use um remetente autorizado pelo provedor. A integração usa [SMTP com Nodemailer](https://nodemailer.com/smtp), com TLS na porta 465 e STARTTLS nas demais (587 por padrão). Reinicie o backend após configurar. Nunca use variáveis `VITE_` para essas credenciais.
 
-Sem SMTP configurado, o envio retorna erro e o acesso permanece bloqueado. Se o cadastro já tiver sido criado antes de uma falha de envio, a tela orienta a tentar novamente pelo login.
+Sem SMTP configurado, o envio retorna erro e o acesso permanece bloqueado. Se o cadastro ou provisionamento já tiver criado a conta antes da falha de envio, a tela orienta a entrar e solicitar explicitamente o reenvio.
 
-Os códigos têm seis dígitos, valem por 10 minutos e são de uso único. O reenvio pode ocorrer após 60 segundos e invalida o código anterior. Há limite de cinco erros e cinco envios por conta em uma janela de 15 minutos, persistido no MySQL, além do limite de requisições por IP no processo da API. O banco guarda um HMAC do código, nunca o código em texto. A validação e o consumo usam transação e bloqueio da conta para evitar reutilização simultânea.
+Os códigos têm seis dígitos, valem por 10 minutos e são de uso único. O reenvio pode ocorrer após 60 segundos e invalida o código anterior. Há limite de cinco erros e três envios por conta em uma janela de 15 minutos, persistido no MySQL, além dos limites de requisições da API. O banco guarda um HMAC do código, nunca o código em texto. A validação e o consumo usam transação e bloqueio da conta para evitar reutilização simultânea.
 
-As rotas `POST /api/pacientes/verificar-email` e `/api/auth/verificar-email` recebem `{ desafio, codigo }`. As rotas correspondentes `/reenviar-codigo` recebem `{ desafio }`. O desafio é temporário e fica apenas em memória na tela; recarregar a página exige reiniciar o login.
+As rotas `POST /api/pacientes/verificar-email` e `/api/auth/verificar-email` recebem `{ desafio, codigo }`. As rotas correspondentes `/reenviar-codigo` recebem `{ desafio }` quando a tela já conhece o desafio. Para contas não verificadas sem desafio disponível no navegador, elas também aceitam `{ email, senha }`, revalidam as credenciais no backend e só então emitem um código. O desafio nunca é persistido no frontend.
 
-Para verificar o backend, execute `npm test` dentro de `backend/`, com o MySQL configurado e a migração aplicada. Os testes usam tabelas temporárias na conexão e entrega de e-mail simulada, sem alterar contas reais nem enviar mensagens. A interface é coberta por `tests/email-verification.spec.js` e pelos fluxos de cadastro, login e reserva.
+Para verificar o backend, execute `npm test` dentro de `backend/`, com o MySQL configurado e a migração existente aplicada. Os testes de autenticação e privacidade usam tabelas temporárias e entrega de e-mail simulada. O teste de concorrência cria uma base `agenda_test_<identificador aleatório>`, copia somente os schemas, insere fixtures e remove essa base ao terminar. Ele exige permissão de criar/remover bases descartáveis; use uma conta de testes, não acrescente essas permissões à conta de produção. Nenhuma conta real é alterada e nenhuma mensagem é enviada. A interface é coberta por `tests/email-verification.spec.js` e pelos fluxos de cadastro, login e reserva.
+
+## Rate limiting e proteção contra abuso
+
+Todas as rotas sob `/api` passam por uma barreira geral, executada antes do parser JSON, das rotas e do pool MySQL. Em paralelo, os pontos que podem causar mais dano possuem regras próprias. Uma resposta bloqueada sempre é `429` em JSON com `codigo: "RATE_LIMIT"`, `Retry-After`, `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` e `RateLimit-Policy`. O frontend preserva a mensagem da API e não repete automaticamente uma operação bloqueada.
+
+| Escopo | Limite padrão | Chave |
+| --- | --- | --- |
+| Todas as rotas `/api` | 180/minuto | IP do cliente |
+| Login profissional e paciente | 10/15 minutos | IP do cliente |
+| Cadastro de paciente | 5/30 minutos | IP do cliente |
+| Verificação de e-mail | 10/15 minutos | IP do cliente |
+| Reenvio de código | 5/15 minutos | IP do cliente + 3 envios/15 min por conta no MySQL |
+| Criar agendamento | 20/10 minutos | paciente autenticado (ou IP antes da autenticação) |
+| Cancelamentos e alterações administrativas | 60/minuto | usuário autenticado |
+
+Os valores podem ser alterados pelas variáveis `RATE_LIMIT_*` documentadas em `backend/.env.example`. Em desenvolvimento, `RATE_LIMIT_STORE=auto` usa armazenamento em memória com no máximo 10.000 chaves e limpeza por expiração. Ele não é compartilhado entre processos e não deve ser tratado como proteção distribuída.
+
+Em produção na Vercel, configure `RATE_LIMIT_STORE=upstash`, `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN` nas variáveis **apenas do serviço backend**. O backend usa janela deslizante do Upstash Redis com prefixo configurável (`RATE_LIMIT_PREFIX`), portanto as instâncias compartilham os mesmos contadores. `RATE_LIMIT_STORE=upstash` falha ao iniciar se as credenciais estiverem ausentes; `auto` sem elas emite um aviso claro de que está usando memória local. Falhas transitórias do Redis não transformam solicitações normais em erros 429/500 e seus logs são agrupados por minuto, sem IPs, tokens, e-mails ou senhas.
+
+O IP é derivado de `x-vercel-forwarded-for` somente quando a Vercel identifica o ambiente. Fora dela, o Express só confia em cabeçalhos de proxy se `TRUST_PROXY` listar proxies conhecidos; não use `trust proxy = true` para essa finalidade.
 
 ## Estrutura
 
@@ -135,3 +179,21 @@ Nome, CRP, retrato e contatos presentes na landing são demonstrativos. Atualize
 - `bootstrap` e `bootstrap-icons`;
 - `vite` e `@vitejs/plugin-react`;
 - `@playwright/test` para testes no navegador.
+
+## Revisão de segurança, mobile e publicação — setembro/2026
+
+Consulte [a auditoria inicial](docs/auditoria-projeto.md) e [o relatório de implementação e testes](docs/relatorio-melhorias.md).
+
+O agendamento preserva a constraint existente de slots ativos e usa uma transação com lock da linha de profissionais para serializar reservas simultâneas. Nenhum schema ou dado existente foi alterado. Datas impossíveis/passadas, horários e IDs malformados são recusados. Duração, intervalo, bloqueios e valores de status foram preservados. Uma transição administrativa incompatível retorna 409 e um ID inexistente retorna 404. O middleware profissional revalida conta ativa, papel e e-mail em cada requisição protegida.
+
+Login e cadastro podem rolar verticalmente quando o teclado, mensagens ou a altura da tela exigirem. Modais têm altura máxima e rolagem interna. As requisições continuam separadas por perfil e pacientes recebem somente os próprios dados.
+
+### Vercel Services
+
+Mantenha o projeto configurado com framework **Services**. O arquivo vercel.json conserva os serviços frontend (raiz) e backend (pasta backend), encaminha /api ao Express e aplica o fallback /index.html somente dentro do frontend. Isso prepara as rotas React para acesso direto sem capturar a API. Configuração conforme [Vercel Services](https://vercel.com/kb/guide/vercel-services) e [Vite SPA](https://vercel.com/docs/frameworks/frontend/vite#using-vite-to-make-spas).
+
+- Mesma origem: deixe VITE_API_URL vazia/removida no build. Outro domínio de API: defina sua origem HTTPS, sem /api.
+- Backend: configure DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET aleatório, JWT_EXPIRES_IN e FRONTEND_URL com a origem pública real.
+- SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS e SMTP_FROM pertencem exclusivamente ao backend. A porta 465 ativa TLS; demais portas usam STARTTLS. Não há variável SECURE em uso.
+- TRUST_PROXY é opcional e deve listar somente IPs/sub-redes de proxies conhecidos. O limite por IP é local ao processo; em múltiplas instâncias, configure também limitação de tráfego na infraestrutura. O limite de desafios por conta já é persistido no MySQL.
+- SMTP real, banco remoto e deploy Vercel devem ser validados no ambiente de publicação. Os testes locais não comprovam entrega de mensagens, acesso a um MySQL remoto ou roteamento no domínio final.

@@ -2,6 +2,10 @@ export function localDateKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+const clinicFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+export const clinicNow = (date = new Date()) => clinicFormatter.format(date);
+export const clinicDateKey = () => clinicNow().slice(0, 10);
+
 export function dateFromKey(value) {
   return new Date(`${value}T12:00:00`);
 }

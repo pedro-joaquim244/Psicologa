@@ -12,8 +12,8 @@ export async function sendLoginCode(email, code) {
     disableFileAccess: true, disableUrlAccess: true,
   });
   const result = await transport.sendMail({
-    from: SMTP_FROM, to: email, subject: 'Seu código de acesso — Helena Martins',
-    text: `Seu código de acesso é: ${code}\n\nEle vale por 10 minutos e só pode ser usado uma vez. Não compartilhe este código.\n\nSe você não solicitou este acesso, ignore esta mensagem.`,
+    from: SMTP_FROM, to: email, subject: 'Confirme seu e-mail — Helena Martins',
+    text: `Seu código de confirmação é: ${code}\n\nEle vale por 10 minutos e só pode ser usado uma vez. Não compartilhe este código.\n\nSe você não criou ou tentou confirmar esta conta, ignore esta mensagem.`,
   });
   if (!result.accepted?.length) throw new Error('SMTP_RECIPIENT_REJECTED');
 }

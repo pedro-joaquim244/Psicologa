@@ -1,0 +1,220 @@
+{
+  "sala": {
+    "src": "images/optimized/sala-1448.webp",
+    "width": 1448,
+    "height": 1086,
+    "variants": [
+      {
+        "src": "images/optimized/sala-480.webp",
+        "width": 480
+      },
+      {
+        "src": "images/optimized/sala-960.webp",
+        "width": 960
+      },
+      {
+        "src": "images/optimized/sala-1440.webp",
+        "width": 1440
+      },
+      {
+        "src": "images/optimized/sala-1448.webp",
+        "width": 1448
+      }
+    ]
+  },
+  "retrato": {
+    "src": "images/optimized/retrato-1122.webp",
+    "width": 1122,
+    "height": 1402,
+    "variants": [
+      {
+        "src": "images/optimized/retrato-480.webp",
+        "width": 480
+      },
+      {
+        "src": "images/optimized/retrato-960.webp",
+        "width": 960
+      },
+      {
+        "src": "images/optimized/retrato-1122.webp",
+        "width": 1122
+      }
+    ]
+  },
+  "escuta": {
+    "src": "images/optimized/escuta-1448.webp",
+    "width": 1448,
+    "height": 1086,
+    "variants": [
+      {
+        "src": "images/optimized/escuta-480.webp",
+        "width": 480
+      },
+      {
+        "src": "images/optimized/escuta-960.webp",
+        "width": 960
+      },
+      {
+        "src": "images/optimized/escuta-1440.webp",
+        "width": 1440
+      },
+      {
+        "src": "images/optimized/escuta-1448.webp",
+        "width": 1448
+      }
+    ]
+  },
+  "escrita": {
+    "src": "images/optimized/escrita-1448.webp",
+    "width": 1448,
+    "height": 1086,
+    "variants": [
+      {
+        "src": "images/optimized/escrita-480.webp",
+        "width": 480
+      },
+      {
+        "src": "images/optimized/escrita-960.webp",
+        "width": 960
+      },
+      {
+        "src": "images/optimized/escrita-1440.webp",
+        "width": 1440
+      },
+      {
+        "src": "images/optimized/escrita-1448.webp",
+        "width": 1448
+      }
+    ]
+  },
+  "presencial": {
+    "src": "images/optimized/presencial-1800.webp",
+    "width": 1800,
+    "height": 1350,
+    "variants": [
+      {
+        "src": "images/optimized/presencial-480.webp",
+        "width": 480
+      },
+      {
+        "src": "images/optimized/presencial-960.webp",
+        "width": 960
+      },
+      {
+        "src": "images/optimized/presencial-1440.webp",
+        "width": 1440
+      },
+      {
+        "src": "images/optimized/presencial-1800.webp",
+        "width": 1800
+      }
+    ]
+  },
+  "natureza": {
+    "src": "images/optimized/natureza-1800.webp",
+    "width": 1800,
+    "height": 1199,
+    "variants": [
+      {
+        "src": "images/optimized/natureza-480.webp",
+        "width": 480
+      },
+      {
+        "src": "images/optimized/natureza-960.webp",
+        "width": 960
+      },
+      {
+        "src": "images/optimized/natureza-1440.webp",
+        "width": 1440
+      },
+      {
+        "src": "images/optimized/natureza-1800.webp",
+        "width": 1800
+      }
+    ]
+  },
+  "online": {
+    "src": "images/optimized/online-1536.webp",
+    "width": 1536,
+    "height": 1024,
+    "variants": [
+      {
+        "src": "images/optimized/online-480.webp",
+        "width": 480
+      },
+      {
+        "src": "images/optimized/online-960.webp",
+        "width": 960
+      },
+      {
+        "src": "images/optimized/online-1440.webp",
+        "width": 1440
+      },
+      {
+        "src": "images/optimized/online-1536.webp",
+        "width": 1536
+      }
+    ]
+  },
+  "caminho": {
+    "src": "images/optimized/caminho-1536.webp",
+    "width": 1536,
+    "height": 1024,
+    "variants": [
+      {
+        "src": "images/optimized/caminho-480.webp",
+        "width": 480
+      },
+      {
+        "src": "images/optimized/caminho-960.webp",
+        "width": 960
+      },
+      {
+        "src": "images/optimized/caminho-1440.webp",
+        "width": 1440
+      },
+      {
+        "src": "images/optimized/caminho-1536.webp",
+        "width": 1536
+      }
+    ]
+  },
+  "botanica": {
+    "src": "images/optimized/botanica-1122.webp",
+    "width": 1122,
+    "height": 1402,
+    "variants": [
+      {
+        "src": "images/optimized/botanica-480.webp",
+        "width": 480
+      },
+      {
+        "src": "images/optimized/botanica-960.webp",
+        "width": 960
+      },
+      {
+        "src": "images/optimized/botanica-1122.webp",
+        "width": 1122
+      }
+    ]
+  },
+  "recomeco": {
+    "src": "images/optimized/recomeco-1122.webp",
+    "width": 1122,
+    "height": 1402,
+    "variants": [
+      {
+        "src": "images/optimized/recomeco-480.webp",
+        "width": 480
+      },
+      {
+        "src": "images/optimized/recomeco-960.webp",
+        "width": 960
+      },
+      {
+        "src": "images/optimized/recomeco-1122.webp",
+        "width": 1122
+      }
+    ]
+  }
+}
