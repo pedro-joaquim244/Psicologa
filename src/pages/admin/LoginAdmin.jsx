@@ -17,12 +17,14 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
   const patient = audience === 'paciente';
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [challenge, setChallenge] = useState(null);
+  const [unverifiedCredentials, setUnverifiedCredentials] = useState(null);
   const [code, setCode] = useState('');
   const [notice, setNotice] = useState('');
   const [time, setTime] = useState(Date.now());
@@ -68,6 +70,7 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
     event.preventDefault();
     if (submitting) return;
     setError("");
+    setUnverifiedCredentials(null);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Informe um e-mail válido.'); return; }
     if (registering && (name.trim().length < 3 || !/^\d{10,13}$/.test(phone.replace(/\D/g, '')))) { setError('Informe seu nome completo e WhatsApp com DDD.'); return; }
     if (registering && (password.length < 8 || new TextEncoder().encode(password).length > 72)) {
@@ -76,18 +79,48 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
     }
     setSubmitting(true);
     try {
-      const data = registering
-        ? await register({ nome: name.trim(), telefone: phone.replace(/\D/g, ''), email: email.trim(), senha: password })
-        : await login({ email: email.trim(), senha: password }, audience);
-      setChallenge(data);
-      setPassword('');
-      setTime(Date.now());
-      setNotice('Código enviado. Confira também a pasta de spam.');
+      if (registering) {
+        const data = await register({ nome: name.trim(), telefone: phone.replace(/\D/g, ''), email: email.trim(), senha: password });
+        setChallenge(data);
+        setPassword('');
+        setTime(Date.now());
+        setNotice('Código enviado. Confira também a pasta de spam.');
+      } else {
+        await login({ email: email.trim(), senha: password }, audience);
+        setPassword('');
+        navigate(destination, { replace: true, state: location.state });
+      }
     } catch (requestError) {
-      setError(requestError.status === 401 ? "E-mail ou senha não conferem. Revise os dados e tente novamente." : requestError.message || "Não foi possível entrar agora.");
+      if (requestError.status === 403 && requestError.data?.codigo === 'EMAIL_NAO_VERIFICADO') {
+        setError(requestError.message || 'Seu e-mail ainda não foi confirmado.');
+        if (requestError.data?.desafio) {
+          setChallenge(requestError.data);
+          setPassword('');
+          setTime(Date.now());
+          setNotice('Use o código que você já recebeu ou solicite um novo.');
+        } else {
+          setUnverifiedCredentials({ email: email.trim(), senha: password });
+        }
+      } else {
+        setError(requestError.status === 401 ? "E-mail ou senha não conferem. Revise os dados e tente novamente." : requestError.message || "Não foi possível entrar agora.");
+      }
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleStartVerification = async () => {
+    if (submitting || !unverifiedCredentials) return;
+    setError(''); setNotice(''); setSubmitting(true);
+    try {
+      const data = await resendEmailCode(unverifiedCredentials, audience);
+      setChallenge(data);
+      setUnverifiedCredentials(null);
+      setPassword('');
+      setTime(Date.now());
+      setNotice('Código enviado. Confira também a pasta de spam.');
+    } catch (requestError) { setError(requestError.message || 'Não foi possível reenviar o código.'); }
+    finally { setSubmitting(false); }
   };
 
   const handleVerify = async (event) => {
@@ -130,13 +163,13 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
           <div className="login-heading">
             <FloralMark /><p className="admin-kicker">{patient ? 'ÁREA DO PACIENTE' : 'ÁREA ADMINISTRATIVA'}</p>
             <h1 id="login-title">{challenge ? <>Confirme seu <em>e-mail.</em></> : registering ? <>Crie sua <em>conta.</em></> : patient ? <>Seu próximo <em>passo.</em></> : <>Bem-vinda <em>de volta.</em></>}</h1>
-            <p>{challenge ? <>Código enviado para <strong className="verification-email">{challenge.email}</strong>. Válido por 10 minutos.</> : registering ? 'Preencha seus dados para agendar. Confirmaremos seu e-mail por código.' : patient ? 'Entre para agendar. Confirmaremos seu acesso com um código por e-mail.' : 'Acesse sua agenda com senha e um código de confirmação por e-mail.'}</p>
+            <p>{challenge ? <>Código enviado para <strong className="verification-email">{challenge.email}</strong>. Válido por 10 minutos.</> : registering ? 'Preencha seus dados para agendar. Confirmaremos seu e-mail por código.' : patient ? 'Entre com seu e-mail e senha para acessar sua conta.' : 'Acesse sua agenda com seu e-mail e senha.'}</p>
           </div>
           {challenge ? <form className="login-form" onSubmit={handleVerify} noValidate>
             {error && <div className="login-error" role="alert"><span>{error}</span></div>}
             {notice && <p className="verification-notice" role="status">{notice}</p>}
             <label className="admin-field"><span>Código de verificação</span><span className="field-control"><input className="verification-code" type="text" name="codigo" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} disabled={submitting} autoFocus aria-describedby="code-help" /></span></label>
-            <p id="code-help" className="verification-notice">{expired ? 'Código expirado. Solicite um novo código abaixo.' : 'Após confirmar, seu e-mail ficará verificado para futuras notificações.'}</p>
+            <p id="code-help" className="verification-notice">{expired ? 'Código expirado. Solicite um novo código abaixo.' : 'Após confirmar uma vez, os próximos acessos usarão apenas e-mail e senha.'}</p>
             <button className="admin-button login-submit" type="submit" disabled={submitting || code.length !== 6 || expired}>{submitting ? 'Aguarde…' : 'Confirmar e entrar'}</button>
             <button className="verification-link" type="button" onClick={handleResend} disabled={submitting || resendSeconds > 0}>{resendSeconds > 0 ? `Reenviar código em ${resendSeconds}s` : 'Reenviar código'}</button>
             <button className="verification-link" type="button" disabled={submitting} onClick={() => {
@@ -146,12 +179,14 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
           </form> : <>
           <form className="login-form" onSubmit={handleSubmit} noValidate>
             {error && <div className="login-error" role="alert"><i className="bi bi-exclamation-circle" aria-hidden="true" /><span>{error}</span></div>}
+            {unverifiedCredentials && <button className="verification-link" type="button" onClick={handleStartVerification} disabled={submitting}>Reenviar código</button>}
             {registering && <>
               <label className="admin-field"><span>Nome completo</span><span className="field-control"><input type="text" name="nome" autoComplete="name" required minLength={3} maxLength={150} value={name} onChange={(event) => setName(event.target.value)} disabled={submitting} /></span></label>
               <label className="admin-field"><span>WhatsApp com DDD</span><span className="field-control"><input type="tel" name="telefone" autoComplete="tel" required maxLength={24} value={phone} onChange={(event) => setPhone(event.target.value)} disabled={submitting} placeholder="(16) 99999-9999" /></span></label>
             </>}
-            <label className="admin-field"><span>E-mail</span><span className="field-control"><i className="bi bi-envelope" aria-hidden="true" /><input type="email" name="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" inputMode="email" required maxLength={255} placeholder="seu@email.com" disabled={submitting} /></span></label>
-            <div className="admin-field"><div className="password-label"><label htmlFor="admin-password">Senha</label>{registering && <span id="password-requirement">8+ caracteres</span>}</div><span className="field-control"><i className="bi bi-lock" aria-hidden="true" /><input id="admin-password" aria-describedby={registering ? "password-requirement" : undefined} type={showPassword ? "text" : "password"} name="senha" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={registering ? 'new-password' : 'current-password'} required placeholder={registering ? 'Crie sua senha' : 'Digite sua senha'} disabled={submitting} /><button type="button" className="password-toggle" onClick={() => setShowPassword((current) => !current)} aria-pressed={showPassword} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}><i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} aria-hidden="true" /></button></span></div>
+            <label className="admin-field"><span>E-mail</span><span className="field-control"><i className="bi bi-envelope" aria-hidden="true" /><input type="email" name="email" value={email} onChange={(event) => { setEmail(event.target.value); setUnverifiedCredentials(null); }} autoComplete="username" inputMode="email" required maxLength={255} placeholder="seu@email.com" disabled={submitting} /></span></label>
+            <div className="admin-field"><div className="password-label"><label htmlFor="admin-password">Senha</label>{registering && <span id="password-requirement">8+ caracteres</span>}</div><span className="field-control"><i className="bi bi-lock" aria-hidden="true" /><input id="admin-password" aria-describedby={registering ? "password-requirement" : undefined} type={showPassword ? "text" : "password"} name="senha" value={password} onChange={(event) => { setPassword(event.target.value); setUnverifiedCredentials(null); }} autoComplete={registering ? 'new-password' : 'current-password'} required placeholder={registering ? 'Crie sua senha' : 'Digite sua senha'} disabled={submitting} /><button type="button" className="password-toggle" onClick={() => setShowPassword((current) => !current)} aria-pressed={showPassword} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}><i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} aria-hidden="true" /></button></span></div>
+            {registering && <div className="admin-field"><div className="password-label"><label htmlFor="admin-confirm-password">Confirmar senha</label></div><span className="field-control"><i className="bi bi-shield-check" aria-hidden="true" /><input id="admin-confirm-password" type={showPassword ? "text" : "password"} name="confirmar_senha" value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); setUnverifiedCredentials(null); }} autoComplete="new-password" required placeholder="Repita sua senha" disabled={submitting} /></span></div>}
             <button className="admin-button login-submit" type="submit" disabled={submitting || !email.trim() || !password}><span>{submitting ? (registering ? 'Criando conta…' : 'Entrando…') : registering ? 'Criar conta' : 'Entrar'}</span><i className="bi bi-arrow-up-right" aria-hidden="true" /></button>
           </form>
           {patient && <p className="login-switch">{registering ? 'Já tem uma conta?' : 'É sua primeira consulta?'} <Link to={registering ? '/login' : '/cadastro'} state={location.state}>{registering ? 'Entrar' : 'Criar conta'}</Link></p>}

@@ -6,15 +6,22 @@ import {
   somentePsicologa,
   somentePaciente,
 } from "../middlewares/autenticacao.js";
+import { bookingLimiter, writeLimiter } from '../middlewares/limitAuth.js';
 
 import { clinicNow, generateSlots, validDate, validId, validTime } from '../utils/scheduling.js';
-import { loadDayAvailability } from '../services/agenda.js';
+import { loadDayAvailability, loadDayBlocks, overlaps } from '../services/agenda.js';
 const router = express.Router();
 router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 router.param('id', (req, res, next, id) => validId(id) ? next() : res.status(400).json({ erro: 'Agendamento inválido.' }));
 
-async function statusConflict(res, id) {
-  const [[current]] = await db.query('SELECT id FROM agendamentos WHERE id = ? LIMIT 1', [id]);
+async function statusConflict(res, id, profissionalId = null) {
+  // A professional must not learn that another professional has an appointment
+  // at a guessed ID. Administrators retain the more specific conflict response.
+  const query = profissionalId == null
+    ? 'SELECT id FROM agendamentos WHERE id = ? LIMIT 1'
+    : 'SELECT id FROM agendamentos WHERE id = ? AND profissional_id = ? LIMIT 1';
+  const params = profissionalId == null ? [id] : [id, profissionalId];
+  const [[current]] = await db.query(query, params);
   return res.status(current ? 409 : 404).json({ erro: current ? 'O status deste agendamento mudou. Atualize a agenda antes de tentar novamente.' : 'Agendamento não encontrado.' });
 }
 
@@ -31,7 +38,7 @@ async function statusConflict(res, id) {
 // Reserva vinculada à conta autenticada do paciente.
 // =====================================================
 
-router.post("/", autenticarToken, somentePaciente, async (req, res) => {
+router.post("/", autenticarToken, somentePaciente, bookingLimiter, async (req, res) => {
   let conexao;
 
   try {
@@ -105,24 +112,10 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
     // VERIFICAR BLOQUEIOS
     // ===================================================
 
-    const [bloqueios] = await conexao.query(
-      `
-      SELECT id
-      FROM bloqueios_agenda
-      WHERE profissional_id = ?
-        AND inicio < ?
-        AND fim > ?
-      LIMIT 1
-      `,
-      [
-        profissional_id,
-        fimCompleto,
-        inicioCompleto,
-      ]
-    );
+    const bloqueios = await loadDayBlocks(conexao, data, profissional_id);
 
 
-    if (bloqueios.length > 0) {
+    if (bloqueios.some((block) => overlaps(inicioCompleto, fimCompleto, block.inicio, block.fim))) {
       await conexao.rollback();
 
       return res.status(409).json({
@@ -246,7 +239,7 @@ router.post("/", autenticarToken, somentePaciente, async (req, res) => {
 
     console.error(
       "Erro ao realizar agendamento:",
-      error.code || error.name
+      error
     );
 
 
@@ -278,26 +271,12 @@ router.get(
 
   async (req, res) => {
     try {
-      const [agendamentos] = await db.query(
-        `
-        SELECT
-          id,
-          profissional_id,
-          nome_cliente,
-          email_cliente,
-          telefone_cliente,
-          modalidade,
-          inicio,
-          fim,
-          status,
-          google_event_id,
-          origem,
-          criado_em,
-          atualizado_em
-        FROM agendamentos
-        ORDER BY inicio ASC
-        `
-      );
+      const profId = req.profissional_id || (req.query.profissional_id ? Number(req.query.profissional_id) : null);
+      const query = profId
+        ? `SELECT id, profissional_id, nome_cliente, email_cliente, telefone_cliente, modalidade, inicio, fim, status, google_event_id, origem, criado_em, atualizado_em FROM agendamentos WHERE profissional_id = ? ORDER BY inicio ASC`
+        : `SELECT id, profissional_id, nome_cliente, email_cliente, telefone_cliente, modalidade, inicio, fim, status, google_event_id, origem, criado_em, atualizado_em FROM agendamentos ORDER BY inicio ASC`;
+      const params = profId ? [profId] : [];
+      const [agendamentos] = await db.query(query, params);
 
 
       return res.status(200).json(
@@ -307,7 +286,7 @@ router.get(
     } catch (error) {
       console.error(
         "Erro ao listar agendamentos:",
-        error.code || error.name
+        error
       );
 
 
@@ -337,28 +316,12 @@ router.get(
       const { id } = req.params;
 
 
-      const [agendamentos] = await db.query(
-        `
-        SELECT
-          id,
-          profissional_id,
-          nome_cliente,
-          email_cliente,
-          telefone_cliente,
-          modalidade,
-          inicio,
-          fim,
-          status,
-          google_event_id,
-          origem,
-          criado_em,
-          atualizado_em
-        FROM agendamentos
-        WHERE id = ?
-        LIMIT 1
-        `,
-        [id]
-      );
+      const isSuperAdmin = req.usuario.tipo === "admin";
+      const query = isSuperAdmin
+        ? `SELECT id, profissional_id, nome_cliente, email_cliente, telefone_cliente, modalidade, inicio, fim, status, google_event_id, origem, criado_em, atualizado_em FROM agendamentos WHERE id = ? LIMIT 1`
+        : `SELECT id, profissional_id, nome_cliente, email_cliente, telefone_cliente, modalidade, inicio, fim, status, google_event_id, origem, criado_em, atualizado_em FROM agendamentos WHERE id = ? AND profissional_id = ? LIMIT 1`;
+      const params = isSuperAdmin ? [id] : [id, req.profissional_id];
+      const [agendamentos] = await db.query(query, params);
 
 
       if (agendamentos.length === 0) {
@@ -375,7 +338,7 @@ router.get(
     } catch (error) {
       console.error(
         "Erro ao buscar agendamento:",
-        error.code || error.name
+        error
       );
 
 
@@ -399,24 +362,22 @@ router.patch(
   "/:id/confirmar",
   autenticarToken,
   somentePsicologa,
+  writeLimiter,
 
   async (req, res) => {
     try {
       const { id } = req.params;
 
 
-      const [resultado] = await db.query(
-        `
-        UPDATE agendamentos
-        SET status = 'confirmado'
-        WHERE id = ?
-          AND status = 'agendado'
-        `,
-        [id]
-      );
+      const isSuperAdmin = req.usuario.tipo === "admin";
+      const query = isSuperAdmin
+        ? `UPDATE agendamentos SET status = 'confirmado' WHERE id = ? AND status = 'agendado'`
+        : `UPDATE agendamentos SET status = 'confirmado' WHERE id = ? AND status = 'agendado' AND profissional_id = ?`;
+      const params = isSuperAdmin ? [id] : [id, req.profissional_id];
+      const [resultado] = await db.query(query, params);
 
 
-      if (resultado.affectedRows === 0) return statusConflict(res, id);
+      if (resultado.affectedRows === 0) return statusConflict(res, id, isSuperAdmin ? null : req.profissional_id);
 
 
       return res.status(200).json({
@@ -427,7 +388,7 @@ router.patch(
     } catch (error) {
       console.error(
         "Erro ao confirmar agendamento:",
-        error.code || error.name
+        error
       );
 
 
@@ -451,24 +412,22 @@ router.patch(
   "/:id/concluir",
   autenticarToken,
   somentePsicologa,
+  writeLimiter,
 
   async (req, res) => {
     try {
       const { id } = req.params;
 
 
-      const [resultado] = await db.query(
-        `
-        UPDATE agendamentos
-        SET status = 'concluido'
-        WHERE id = ?
-          AND status IN ('agendado', 'confirmado')
-        `,
-        [id]
-      );
+      const isSuperAdmin = req.usuario.tipo === "admin";
+      const query = isSuperAdmin
+        ? `UPDATE agendamentos SET status = 'concluido' WHERE id = ? AND status IN ('agendado', 'confirmado')`
+        : `UPDATE agendamentos SET status = 'concluido' WHERE id = ? AND status IN ('agendado', 'confirmado') AND profissional_id = ?`;
+      const params = isSuperAdmin ? [id] : [id, req.profissional_id];
+      const [resultado] = await db.query(query, params);
 
 
-      if (resultado.affectedRows === 0) return statusConflict(res, id);
+      if (resultado.affectedRows === 0) return statusConflict(res, id, isSuperAdmin ? null : req.profissional_id);
 
 
       return res.status(200).json({
@@ -479,7 +438,7 @@ router.patch(
     } catch (error) {
       console.error(
         "Erro ao concluir agendamento:",
-        error.code || error.name
+        error
       );
 
 
@@ -503,24 +462,22 @@ router.patch(
   "/:id/cancelar",
   autenticarToken,
   somentePsicologa,
+  writeLimiter,
 
   async (req, res) => {
     try {
       const { id } = req.params;
 
 
-      const [resultado] = await db.query(
-        `
-        UPDATE agendamentos
-        SET status = 'cancelado'
-        WHERE id = ?
-          AND status != 'cancelado'
-        `,
-        [id]
-      );
+      const isSuperAdmin = req.usuario.tipo === "admin";
+      const query = isSuperAdmin
+        ? `UPDATE agendamentos SET status = 'cancelado' WHERE id = ? AND status != 'cancelado'`
+        : `UPDATE agendamentos SET status = 'cancelado' WHERE id = ? AND status != 'cancelado' AND profissional_id = ?`;
+      const params = isSuperAdmin ? [id] : [id, req.profissional_id];
+      const [resultado] = await db.query(query, params);
 
 
-      if (resultado.affectedRows === 0) return statusConflict(res, id);
+      if (resultado.affectedRows === 0) return statusConflict(res, id, isSuperAdmin ? null : req.profissional_id);
 
 
       return res.status(200).json({
@@ -531,7 +488,7 @@ router.patch(
     } catch (error) {
       console.error(
         "Erro ao cancelar agendamento:",
-        error.code || error.name
+        error
       );
 
 

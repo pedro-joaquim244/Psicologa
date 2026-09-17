@@ -15,7 +15,17 @@ test('CORS autoriza origens exatas e não ecoa origens arbitrárias', async () =
     assert.equal(response.headers.get('access-control-allow-origin'), source.endsWith('evil.test') ? null : source);
     assert.equal(response.headers.get('cache-control'), 'no-store');
     assert.equal(response.headers.get('x-powered-by'), null);
+    assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(response.headers.get('x-frame-options'), 'DENY');
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+    assert.match(response.headers.get('content-security-policy'), /default-src 'none'/);
+    assert.equal(response.headers.get('strict-transport-security'), 'max-age=31536000; includeSubDomains');
   }
+});
+test('database diagnostic is not exposed in production', async () => {
+  const response = await fetch(origin + '/api/teste-banco');
+  assert.equal(response.status, 404);
+  assert.deepEqual(await response.json(), { erro: 'Rota não encontrada.' });
 });
 test('preflight permite excluir horários com Authorization a partir do frontend autorizado', async () => {
   const response = await fetch(origin + '/api/agenda/bloqueios/1', {

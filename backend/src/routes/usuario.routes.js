@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../database.js';
 import { autenticarToken, somentePaciente } from '../middlewares/autenticacao.js';
+import { writeLimiter } from '../middlewares/limitAuth.js';
 
 const router = Router();
 const patientFields = 'id, modalidade, inicio, fim, status, criado_em';
@@ -18,12 +19,12 @@ router.get('/agendamentos', async (req, res) => {
     );
     res.json(rows);
   } catch (error) {
-    console.error('Erro ao listar consultas do paciente:', error.code || error.name);
+    console.error('Erro ao listar consultas do paciente:', error);
     res.status(500).json({ erro: 'Não foi possível carregar suas consultas.' });
   }
 });
 
-router.patch('/agendamentos/:id/cancelar', async (req, res) => {
+router.patch('/agendamentos/:id/cancelar', writeLimiter, async (req, res) => {
   if (!/^[1-9]\d*$/.test(req.params.id) || !Number.isSafeInteger(Number(req.params.id))) {
     return res.status(400).json({ erro: 'Consulta inválida.' });
   }
@@ -42,7 +43,7 @@ router.patch('/agendamentos/:id/cancelar', async (req, res) => {
     // Repetir uma solicitação já concluída é seguro após uma falha de rede.
     res.json({ agendamento: rows[0] });
   } catch (error) {
-    console.error('Erro ao cancelar consulta do paciente:', error.code || error.name);
+    console.error('Erro ao cancelar consulta do paciente:', error);
     res.status(500).json({ erro: 'Não foi possível cancelar sua consulta. Tente novamente.' });
   }
 });

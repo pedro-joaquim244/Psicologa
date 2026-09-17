@@ -7,6 +7,7 @@ import db from '../src/database.js';
 import agendaRoutes from '../src/routes/agenda.routes.js';
 import appointmentRoutes from '../src/routes/agendamentos.routes.js';
 import slotRoutes from '../src/routes/horarios.routes.js';
+import { resetRateLimitStoreForTests } from '../src/middlewares/limitAuth.js';
 import { ensureAgendaSchema } from '../src/services/agendaSchema.js';
 
 // Todas as escritas abaixo ocorrem em tabelas TEMPORARY desta conexão.
@@ -93,6 +94,7 @@ before(async () => {
 });
 
 beforeEach(async () => {
+  resetRateLimitStoreForTests();
   for (const table of tables) await connection.query(`DELETE FROM ${table}`);
   await connection.query("INSERT INTO profissionais (id, nome, ativo) VALUES (1, 'Profissional teste', 1), (2, 'Outra profissional', 1)");
   await connection.query("INSERT INTO usuarios_admin (id, nome, email, senha, tipo, ativo, email_verificado_em) VALUES (1, 'Psicóloga teste', 'psicologa@example.com', 'hash', 'psicologa', 1, NOW()), (2, 'Admin teste', 'admin@example.com', 'hash', 'admin', 1, NOW())");
@@ -187,6 +189,25 @@ test('recorrências respeitam duração e intervalo, admitem edição e valem na
   assert.deepEqual((await publicSlots('2035-09-25')).map((slot) => slot.horario), initialSlots);
 });
 
+test('lote semanal cria 20 slots com contagem e ignora uma repetição sem duplicar', async () => {
+  await connection.query('DELETE FROM disponibilidades');
+  const body = {
+    tipo: 'recorrente', dias_semana: [1, 2, 3, 4, 5],
+    periodos: [{ hora_inicio: '08:00', hora_fim: '12:00', duracao_minutos: 50, intervalo_minutos: 10 }],
+  };
+  const created = await request('/agenda/disponibilidades/lote', { method: 'POST', body });
+  assert.equal(created.status, 201, JSON.stringify(created.data));
+  assert.deepEqual({ criados: created.data.criados, ignorados: created.data.ignorados }, { criados: 20, ignorados: 0 });
+  assert.match(created.data.mensagem, /20 horários adicionados/i);
+  assert.deepEqual(await publicSlots(), [{ horario: '08:00', fim: '08:50' }, { horario: '09:00', fim: '09:50' }, { horario: '10:00', fim: '10:50' }, { horario: '11:00', fim: '11:50' }]);
+  const repeated = await request('/agenda/disponibilidades/lote', { method: 'POST', body });
+  assert.equal(repeated.status, 201, JSON.stringify(repeated.data));
+  assert.deepEqual({ criados: repeated.data.criados, ignorados: repeated.data.ignorados }, { criados: 0, ignorados: 20 });
+  assert.match(repeated.data.mensagem, /20 duplicados ignorados/i);
+  const snapshot = await request(`/agenda?data=${date}`);
+  assert.equal(snapshot.data.recorrentes.length, 20);
+});
+
 test('bloqueio cobre todos os slots conflitantes, pode mudar de período e sua exclusão libera a rotina', async () => {
   const created = await createBlock(block({ hora_inicio: '09:30', hora_fim: '11:30' }));
   assert.deepEqual((await publicSlots()).map((slot) => slot.horario), ['14:00', '15:00', '16:00', '17:00']);
@@ -198,6 +219,18 @@ test('bloqueio cobre todos os slots conflitantes, pode mudar de período e sua e
   assert.equal((await request(`/agenda/bloqueios/${created.id}`, { method: 'DELETE' })).status, 200);
   assert.deepEqual((await publicSlots()).map((slot) => slot.horario), initialSlots);
   assert.equal((await request(`/agenda/bloqueios/${created.id}`, { method: 'DELETE' })).status, 404);
+});
+
+test('leitura administrativa traz as próximas exceções ordenadas sem ampliar a API pública', async () => {
+  await createAvailability();
+  await createBlock();
+  const snapshot = await request(`/agenda?data=${date}`);
+  assert.deepEqual(snapshot.data.proximas_excecoes.map(({ tipo, data, hora_inicio, hora_fim, motivo }) => ({ tipo, data, hora_inicio, hora_fim, motivo })), [
+    { tipo: 'bloqueio', data: date, hora_inicio: '15:00', hora_fim: '15:50', motivo: 'Compromisso pessoal privado' },
+    { tipo: 'extra', data: date, hora_inicio: '18:00', hora_fim: '18:50', motivo: null },
+  ]);
+  const publicResult = await request(`/horarios?data=${date}`, { token: null });
+  assert.deepEqual(Object.keys(publicResult.data).sort(), ['data', 'horarios']);
 });
 
 test('fronteiras encostadas não se sobrepõem e o motivo de bloqueio nunca aparece na API pública', async () => {
@@ -328,12 +361,30 @@ test('profissionais têm disponibilidades independentes e não recebem extras ou
   await createAvailability();
   await createBlock();
   assert.deepEqual(await publicSlots(date, 2), []);
-  await createAvailability(extra({ profissional_id: 2 }));
+  // A token without profissional_id represents a session issued before that
+  // claim existed. The account binding from the database still applies.
+  const legacyToken = credential();
+  const deniedWrite = await request('/agenda/disponibilidades', { method: 'POST', body: extra({ profissional_id: 2 }), token: legacyToken });
+  assert.equal(deniedWrite.status, 403);
+  const deniedRead = await request(`/agenda?data=${date}&profissional_id=2`, { token: legacyToken });
+  assert.equal(deniedRead.status, 403);
+  const createdForOther = await request('/agenda/disponibilidades', { method: 'POST', body: extra({ profissional_id: 2 }), token: credential('admin') });
+  assert.equal(createdForOther.status, 201, JSON.stringify(createdForOther.data));
   assert.deepEqual(await publicSlots(date, 2), [{ horario: '18:00', fim: '18:50' }]);
-  const snapshot = await request(`/agenda?data=${date}&profissional_id=2`);
+  const snapshot = await request(`/agenda?data=${date}&profissional_id=2`, { token: credential('admin') });
   assert.equal(snapshot.data.recorrentes.length, 0);
   assert.equal(snapshot.data.extras.length, 1);
   assert.equal(snapshot.data.bloqueios.length, 0);
+});
+
+test('a professional cannot discover or change another professional appointment', async () => {
+  await connection.query(`INSERT INTO agendamentos
+    (id, paciente_id, profissional_id, nome_cliente, email_cliente, telefone_cliente, modalidade, inicio, fim, status)
+    VALUES (999, 1, 2, 'Paciente privado', 'privado@example.com', '16999999999', 'online', ?, ?, 'agendado')`, [`${date} 18:00:00`, `${date} 18:50:00`]);
+  const denied = await request('/agendamentos/999/confirmar', { method: 'PATCH', token: credential() });
+  assert.equal(denied.status, 404);
+  const allowed = await request('/agendamentos/999/confirmar', { method: 'PATCH', token: credential('admin') });
+  assert.equal(allowed.status, 200);
 });
 
 test('calendário, relógio, duração, intervalo e identificadores inválidos são rejeitados sem alterar a agenda', async () => {

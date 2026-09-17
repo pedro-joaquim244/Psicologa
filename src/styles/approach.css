@@ -31,7 +31,7 @@
 .approach-indicator.is-active::after, .approach-indicator:hover::after { transform: scaleX(1); }
 .approach-step {
   position: relative;
-  min-height: clamp(272px, 38svh, 352px);
+  min-height: clamp(240px, 32svh, 320px);
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr);
   align-content: center;
@@ -61,7 +61,7 @@
 @media (max-width: 1023px), (max-height: 649px) {
   .approach-sticky { position: static; }
   .approach-sticky .display-title { font-size: clamp(2.5rem, 5vw, 3.5rem); }
-  .approach-step { min-height: 256px; padding: 32px 0; grid-template-columns: 32px minmax(0, 1fr); gap: 16px; }
+  .approach-step { min-height: 224px; padding: 32px 0; grid-template-columns: 32px minmax(0, 1fr); gap: 16px; }
   .step-number { font-size: 2rem; }
   .approach-step > .bi { right: 0; top: 8px; }
   .approach-progress { display: none; }

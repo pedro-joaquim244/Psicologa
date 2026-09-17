@@ -37,7 +37,9 @@ async function setup(page, { conflict = false, availabilityError = false, authen
       record = { id: 123, nome_cliente: body.nome, telefone_cliente: body.telefone, email_cliente: body.email, modalidade: body.modalidade, inicio: `${body.data} ${body.horario}:00`, fim: `${body.data} 09:50:00`, status: 'agendado' };
       return json({ agendamento: { id: 123, ...body, horarioFim: '09:50' } }, 201);
     }
-    if (['/api/auth/login', '/api/pacientes/cadastro', '/api/pacientes/login'].includes(url.pathname)) return json({ verificacaoPendente: true, desafio: 'a'.repeat(64), email: patient.email, expiraEm: new Date('2030-09-10T12:10:00').getTime(), reenviarEm: new Date('2030-09-10T12:01:00').getTime() });
+    if (url.pathname === '/api/pacientes/cadastro') return json({ verificacaoPendente: true, desafio: 'a'.repeat(64), email: patient.email, expiraEm: new Date('2030-09-10T12:10:00').getTime(), reenviarEm: new Date('2030-09-10T12:01:00').getTime() });
+    if (url.pathname === '/api/pacientes/login') return json({ mensagem: 'Login realizado com sucesso!', token: 'patient-jwt', usuario: { ...patient, email_verificado: true } });
+    if (url.pathname === '/api/auth/login') return json({ mensagem: 'Login realizado com sucesso!', token: 'test-jwt', usuario: { ...user, email_verificado: true } });
     if (url.pathname === '/api/auth/verificar-email') return json({ token: 'test-jwt', usuario: { ...user, email_verificado: true } });
     if (url.pathname === '/api/pacientes/verificar-email') return json({ token: 'patient-jwt', usuario: { ...patient, email_verificado: true } });
     expect(req.headers().authorization).toBe('Bearer test-jwt');
@@ -90,8 +92,6 @@ test('paciente cria conta, reserva e psicóloga confirma no painel', async ({ pa
   await page.getByLabel('E-mail', { exact: true }).fill('psicologa@email.com');
   await page.getByLabel('Senha', { exact: true }).fill('123456');
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
-  await page.getByLabel('Código de verificação').fill('123456');
-  await page.getByRole('button', { name: 'Confirmar e entrar' }).click();
   await expect(page).toHaveURL(/\/adm\/agenda$/);
   const appointment = page.getByRole('article').filter({ hasText: 'Teste Integração' });
   await expect(appointment).toBeVisible();

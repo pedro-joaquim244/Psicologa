@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.routes.js';
 import pacientesRoutes from './routes/pacientes.routes.js';
 import usuarioRoutes from './routes/usuario.routes.js';
 import agendaRoutes from './routes/agenda.routes.js';
+import { globalApiLimiter } from './middlewares/limitAuth.js';
 
 export function createApp({ frontendUrl = process.env.FRONTEND_URL, production = process.env.NODE_ENV === 'production' } = {}) {
   const app = express();
@@ -21,18 +22,28 @@ export function createApp({ frontendUrl = process.env.FRONTEND_URL, production =
   }));
   app.use((_req, res, next) => {
     res.set('X-Content-Type-Options', 'nosniff');
+    res.set('X-Frame-Options', 'DENY');
+    res.set('Content-Security-Policy', "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
+    res.set('Referrer-Policy', 'no-referrer');
+    res.set('Permissions-Policy', 'camera=(), geolocation=(), microphone=(), payment=()');
+    if (production) res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     res.set('Cache-Control', 'no-store');
     next();
   });
-  app.use(cors({ origin(origin, callback) { callback(null, !origin || origins.has(origin)); }, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'], exposedHeaders: ['Retry-After'] }));
+  app.use(cors({ origin(origin, callback) { callback(null, !origin || origins.has(origin)); }, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'], exposedHeaders: ['Retry-After', 'RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset', 'RateLimit-Policy'] }));
+  // CORS preflights are skipped by the limiter; all regular API traffic is
+  // guarded before JSON parsing and before it can reach a route or the MySQL pool.
+  app.use('/api', globalApiLimiter);
   app.use(express.json({ limit: '32kb' }));
   app.get('/', (_req, res) => res.json({ mensagem: 'API da agenda funcionando!' }));
-  app.get('/api/teste-banco', async (_req, res) => {
+  // This diagnostic endpoint is useful locally, but must not expose database
+  // state or accept anonymous traffic in production.
+  if (!production) app.get('/api/teste-banco', async (_req, res) => {
     try {
       const [resultado] = await db.query('SELECT NOW() AS agora');
       res.json({ mensagem: 'Banco conectado com sucesso!', resultado });
     } catch (error) {
-      console.error('Erro ao conectar no banco:', error.code || error.name);
+      console.error('Erro ao conectar no banco:', error);
       res.status(503).json({ erro: 'Não foi possível conectar no banco.' });
     }
   });
@@ -46,7 +57,7 @@ export function createApp({ frontendUrl = process.env.FRONTEND_URL, production =
   app.use((error, _req, res, _next) => {
     if (error.type === 'entity.parse.failed') return res.status(400).json({ erro: 'O corpo da solicitação deve ser um JSON válido.' });
     if (error.type === 'entity.too.large') return res.status(413).json({ erro: 'A solicitação excede o tamanho permitido.' });
-    console.error('Erro na API:', error.code || error.name);
+    console.error('Erro na API:', error);
     res.status(500).json({ erro: 'Não foi possível concluir a solicitação agora.' });
   });
   return app;

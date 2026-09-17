@@ -1,4 +1,4 @@
-.about-section { background: var(--paper-dark); padding-bottom: calc(var(--space-section) + 60px); }
+.about-section { background: var(--paper-dark); padding-bottom: calc(var(--space-section) + 32px); }
 .about-visual { position: relative; width: 41%; padding-bottom: 90px; }
 .portrait-frame { aspect-ratio: 4 / 5; overflow: hidden; background: var(--sage); }
 .portrait-frame { border-radius: 20px; }
@@ -34,9 +34,9 @@
   .portrait-side-label { left: -5px; font-size: .5rem; }
   .portrait-caption { margin-left: 16px; flex-direction: row; align-items: center; }
   .portrait-caption > span:last-child { max-width: 100px; text-align: right; }
-  .about-detail { position: relative; width: 60%; margin: var(--space-lg) 0 0 auto; right: auto; bottom: auto; }
+  .about-detail { position: relative; width: 60%; margin: 32px 0 0 auto; right: auto; bottom: auto; }
   .about-detail-photo { aspect-ratio: 4 / 5; border: 0; }
-  .about-copy { margin-top: var(--space-xl); }
+  .about-copy { margin-top: var(--space-lg); }
   .about-copy .display-title { font-size: var(--fs-display); }
   .about-credentials { flex-direction: row; flex-wrap: wrap; gap: var(--space-md); }
 }

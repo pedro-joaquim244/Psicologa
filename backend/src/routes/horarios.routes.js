@@ -28,7 +28,7 @@ router.get("/", async (req, res) => {
       horarios,
     });
   } catch (error) {
-    console.error("Erro ao buscar horários:", error.code || error.name);
+    console.error("Erro ao buscar horários:", error);
 
     return res.status(500).json({
       erro: "Erro ao buscar horários disponíveis.",

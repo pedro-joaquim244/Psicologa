@@ -3,14 +3,15 @@ import bcrypt from 'bcryptjs';
 import db from '../database.js';
 import { autenticarToken, somentePaciente } from '../middlewares/autenticacao.js';
 
-import { limitAuth } from '../middlewares/limitAuth.js';
+import { loginLimiter, registerLimiter, resendLimiter, verificationLimiter } from '../middlewares/limitAuth.js';
 import { emailVerification, verificationError } from '../services/emailVerification.js';
+import { authenticateCredentials, createAuthenticatedSession, EMAIL_NOT_VERIFIED, validCredentials } from '../services/authentication.js';
 import { addVerificationRoutes } from './verification.routes.js';
 
 const router = express.Router();
-addVerificationRoutes(router, 'paciente', limitAuth);
+addVerificationRoutes(router, 'paciente', { verifyLimiter: verificationLimiter, resendLimiter });
 
-router.post('/cadastro', limitAuth, async (req, res) => {
+router.post('/cadastro', registerLimiter, async (req, res) => {
   const { nome, email, telefone, senha } = req.body || {};
   if (typeof nome !== 'string' || nome.trim().length < 3 || nome.trim().length > 150
       || typeof email !== 'string' || email.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
@@ -30,24 +31,27 @@ router.post('/cadastro', limitAuth, async (req, res) => {
     }
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ erro: 'Já existe uma conta com esse e-mail. Entre com sua senha.' });
-    console.error('Erro ao cadastrar paciente:', error.code || error.name);
+    console.error('Erro ao cadastrar paciente:', error);
     return res.status(500).json({ erro: 'Não foi possível criar sua conta agora.' });
   }
 });
 
-router.post('/login', limitAuth, async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const { email, senha } = req.body || {};
-  if (typeof email !== 'string' || typeof senha !== 'string' || !email.trim() || !senha || email.length > 255 || Buffer.byteLength(senha, 'utf8') > 72) {
+  if (!validCredentials({ email, senha })) {
     return res.status(400).json({ erro: 'Informe um e-mail e uma senha válidos.' });
   }
   try {
-    const [rows] = await db.query('SELECT id, nome, email, telefone, senha, ativo FROM pacientes WHERE email = ? LIMIT 1', [email.trim().toLowerCase()]);
-    const usuario = rows[0];
-    if (!usuario || !usuario.ativo || !await bcrypt.compare(senha, usuario.senha)) return res.status(401).json({ erro: 'E-mail ou senha incorretos.' });
-    return res.json(await emailVerification.issue('paciente', usuario.id));
+    const usuario = await authenticateCredentials('paciente', { email, senha });
+    if (!usuario) return res.status(401).json({ erro: 'E-mail ou senha incorretos.' });
+    if (!usuario.email_verificado_em) {
+      const pending = await emailVerification.pending('paciente', usuario.id, usuario.email);
+      return res.status(403).json({ erro: 'Confirme seu e-mail antes de entrar.', codigo: EMAIL_NOT_VERIFIED, ...pending });
+    }
+    return res.json(createAuthenticatedSession('paciente', usuario));
   } catch (error) {
     if (error.status) return verificationError(res, error);
-    console.error('Erro ao entrar como paciente:', error.code || error.name);
+    console.error('Erro ao entrar como paciente:', error);
     return res.status(500).json({ erro: 'Não foi possível entrar agora.' });
   }
 });

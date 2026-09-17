@@ -66,17 +66,14 @@ async function openUserMenu(page) {
   await page.getByRole('button', { name: 'Joaquim', exact: true }).click();
 }
 
-test('rota privada volta ao destino após login e confirmação por e-mail', async ({ page }) => {
+test('rota privada volta ao destino após login direto de conta verificada', async ({ page }) => {
   await mockApi(page, { items: [] });
-  await page.route('**/api/pacientes/login', (route) => route.fulfill({ json: { verificacaoPendente: true, desafio: 'a'.repeat(64), email: patient.email, expiraEm: Date.now() + 600000, reenviarEm: Date.now() + 60000 } }));
-  await page.route('**/api/pacientes/verificar-email', (route) => route.fulfill({ json: { token: 'patient-token', usuario: patient } }));
+  await page.route('**/api/pacientes/login', (route) => route.fulfill({ json: { mensagem: 'Login realizado com sucesso!', token: 'patient-token', usuario: { ...patient, email_verificado: true } } }));
   await page.goto('/minhas-consultas');
   await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel('E-mail', { exact: true }).fill(patient.email);
   await page.getByLabel('Senha', { exact: true }).fill('SenhaTeste123');
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
-  await page.getByLabel('Código de verificação').fill('123456');
-  await page.getByRole('button', { name: 'Confirmar e entrar' }).click();
   await expect(page).toHaveURL(/\/minhas-consultas$/);
   await expect(page.getByText('Você ainda não possui consultas agendadas.')).toBeVisible();
   await openUserMenu(page);

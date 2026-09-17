@@ -30,10 +30,10 @@
   .cta-photo-note { font-size: 2rem; }
 }
 @media (max-width: 650px) {
-  .cta-grid { grid-template-columns: 1fr; gap: var(--space-xl); }
+  .cta-grid { grid-template-columns: 1fr; gap: 48px; }
   .cta-section h2 { font-size: var(--fs-display); }
   .format-description { min-height: 70px; }
-  .cta-visual { margin-block: var(--space-lg) 0; margin-left: 10%; }
+  .cta-visual { margin-block: 0; margin-left: 10%; }
   .cta-photo { aspect-ratio: 4 / 5; }
   .cta-visual .circular-badge { top: -45px; right: 5px; }
   .cta-photo-note { font-size: 2rem; }

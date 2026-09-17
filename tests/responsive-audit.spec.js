@@ -10,7 +10,7 @@ async function mockApi(page) {
     const path = new URL(route.request().url()).pathname;
     if (path === '/api/horarios') return route.fulfill({ json: { horarios: [{ horario: '09:00', fim: '09:50' }] } });
     if (path.endsWith('/me')) return route.fulfill({ json: { usuario: patient } });
-    if (path.endsWith('/login')) return route.fulfill({ json: { verificacaoPendente: true, desafio: 'a'.repeat(64), email: patient.email, expiraEm: Date.now() + 600000, reenviarEm: Date.now() + 60000 } });
+    if (path.endsWith('/login')) return route.fulfill({ status: 403, json: { erro: 'Confirme seu e-mail antes de entrar.', codigo: 'EMAIL_NAO_VERIFICADO', verificacaoPendente: true, desafio: 'a'.repeat(64), email: patient.email, expiraEm: Date.now() + 600000, reenviarEm: Date.now() + 60000 } });
     if (path.endsWith('/cancelar')) return route.fulfill({ status: 503, json: { erro: 'Não foi possível cancelar a consulta neste momento. Confira sua conexão e tente novamente. Seu agendamento permanece reservado até a confirmação do cancelamento.' } });
     return route.fulfill({ json: [appointment] });
   });

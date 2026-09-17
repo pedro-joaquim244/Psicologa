@@ -46,7 +46,7 @@ async function mockApi(page, records = appointments) {
     const url = new URL(request.url());
 
     if (url.pathname === '/api/auth/login') {
-      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ verificacaoPendente: true, desafio: 'a'.repeat(64), email: 'psicologa@email.com', expiraEm: Date.now() + 600000, reenviarEm: Date.now() + 60000 }) });
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ mensagem: 'Login realizado com sucesso!', token: 'token-de-teste', usuario: { id: 7, nome: 'Helena Martins', email: 'psicologa@email.com', tipo: 'admin', email_verificado: true } }) });
     }
     if (url.pathname === '/api/auth/verificar-email') {
       await route.fulfill({
@@ -84,9 +84,6 @@ test('protege a agenda e autentica mantendo a sessão', async ({ page }) => {
   await page.getByLabel('E-mail').fill('psicologa@email.com');
   await page.getByLabel('Senha', { exact: true }).fill('123456');
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
-  expect(await page.evaluate(() => localStorage.getItem('psicologa_token'))).toBeNull();
-  await page.getByLabel('Código de verificação').fill('123456');
-  await page.getByRole('button', { name: 'Confirmar e entrar' }).click();
 
   await expect(page).toHaveURL(/\/adm\/agenda$/);
   await expect(page.getByRole('heading', { name: 'Olá, Helena.' })).toBeVisible();

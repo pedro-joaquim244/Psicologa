@@ -50,13 +50,14 @@ export async function somentePsicologa(req, res, next) {
   }
 
   try {
-    const [[user]] = await db.query('SELECT id, tipo, email, email_verificado_em FROM usuarios_admin WHERE id = ? AND ativo = 1 LIMIT 1', [req.usuario.id]);
+    const [[user]] = await db.query('SELECT id, tipo, email, email_verificado_em, profissional_id FROM usuarios_admin WHERE id = ? AND ativo = 1 LIMIT 1', [req.usuario.id]);
     if (!user || user.tipo !== req.usuario.tipo || user.email !== req.usuario.email || !user.email_verificado_em) {
       return res.status(401).json({ erro: 'Sua sessão não está mais disponível. Entre novamente.' });
     }
+    req.profissional_id = user.profissional_id || req.usuario.profissional_id || 1;
     next();
   } catch (error) {
-    console.error('Erro ao validar profissional:', error.code || error.name);
+    console.error('Erro ao validar profissional:', error);
     res.status(500).json({ erro: 'Não foi possível verificar sua conta agora.' });
   }
 }
@@ -70,7 +71,7 @@ export async function somentePaciente(req, res, next) {
     req.paciente = rows[0];
     next();
   } catch (error) {
-    console.error('Erro ao validar conta:', error.code || error.name);
+    console.error('Erro ao validar conta:', error);
     res.status(500).json({ erro: 'Não foi possível verificar sua conta agora.' });
   }
 }

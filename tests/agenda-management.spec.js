@@ -56,6 +56,27 @@ async function mockAgenda(page) {
       return json({ data: date, profissional_id: 1, duracao_padrao: 50, intervalo_padrao: 10, recorrentes: state.recorrentes, extras, bloqueios, horarios });
     }
 
+    if (url.pathname === '/api/agenda/disponibilidades/lote' && method === 'POST') {
+      const body = request.postDataJSON();
+      state.requests.push({ method, path: url.pathname, body, authorization: request.headers().authorization });
+      if (state.nextFailure) {
+        const failure = state.nextFailure;
+        state.nextFailure = null;
+        return json({ erro: failure.message }, failure.status);
+      }
+      const created = [];
+      for (const dayOfWeek of body.dias_semana) for (const period of body.periodos) {
+        const record = {
+          id: state.nextId++, tipo: 'recorrente', dia_semana: dayOfWeek,
+          hora_inicio: `${period.hora_inicio.slice(0, 5)}:00`, hora_fim: `${period.hora_fim.slice(0, 5)}:00`,
+          duracao_minutos: Number(period.duracao_minutos), intervalo_minutos: Number(period.intervalo_minutos),
+        };
+        state.recorrentes.push(record);
+        created.push(record);
+      }
+      return json({ mensagem: `${created.length} horários adicionados.`, criados: created.length, ignorados: 0, disponibilidades: created }, 201);
+    }
+
     const match = url.pathname.match(/^\/api\/agenda\/(disponibilidades|bloqueios)(?:\/(\d+))?$/);
     if (match && ['POST', 'PATCH', 'DELETE'].includes(method)) {
       const [, resource, rawId] = match;
@@ -193,7 +214,7 @@ test('administra um período semanal com duração e intervalo próprios', async
   await dialog.getByLabel('Duração da consulta (min)', { exact: true }).fill('40');
   await dialog.getByLabel('Intervalo entre consultas (min)', { exact: true }).fill('20');
   await expect(dialog.getByLabel('Data', { exact: true })).toHaveCount(0);
-  await dialog.getByRole('button', { name: 'Salvar período', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Criar horários', exact: true }).click();
   await expect(dialog).toBeHidden();
   let card = page.getByRole('article').filter({ hasText: '18:00' });
   await expect(card).toHaveCount(1);
@@ -205,14 +226,42 @@ test('administra um período semanal com duração e intervalo próprios', async
   await dialog.getByLabel('Horário final', { exact: true }).fill('21:00');
   await dialog.getByRole('button', { name: 'Salvar período', exact: true }).click();
   await expect(dialog).toBeHidden();
-  card = page.getByRole('article').filter({ hasText: '21:00' });
+  expect(state.recorrentes.find((item) => item.id === 100)).toMatchObject({ hora_fim: '21:00:00', duracao_minutos: 40, intervalo_minutos: 20 });
+  card = page.getByRole('article').filter({ hasText: '20:00' });
   await expect(card).toHaveCount(1);
+  await expect(card).toContainText('até 20:40');
   await card.getByRole('button', { name: 'Excluir', exact: true }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Excluir', exact: true }).click();
   await expect(page.getByRole('alertdialog')).toBeHidden();
-  await expect(page.getByRole('article').filter({ hasText: '21:00' })).toHaveCount(0);
+  await expect(page.getByRole('article').filter({ hasText: '20:00' })).toHaveCount(0);
   expect(state.recorrentes).toHaveLength(2);
   expect(state.requests.map((item) => item.method)).toEqual(['POST', 'PATCH', 'DELETE']);
+});
+
+test('pré-visualiza e cria 20 horários em cinco dias com um único envio em lote', async ({ page }) => {
+  await seedSession(page);
+  const state = await mockAgenda(page);
+  await page.goto('/adm/agenda');
+  await page.getByRole('button', { name: 'Rotina semanal', exact: true }).click();
+  await page.getByRole('button', { name: 'Adicionar horários', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByText('Dias da semana', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: /Manhã/ }).click();
+  const preview = dialog.locator('.schedule-live-preview');
+  await expect(preview).toContainText('5 dias');
+  await expect(preview).toContainText('4 horários por dia');
+  await expect(preview).toContainText('20 no total');
+  await expect(preview).toContainText('08:00–08:50');
+  await dialog.getByRole('button', { name: 'Criar horários', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  expect(state.requests[0]).toMatchObject({
+    method: 'POST', path: '/api/agenda/disponibilidades/lote',
+    authorization: 'Bearer agenda-admin-token',
+    body: { tipo: 'recorrente', dias_semana: [1, 2, 3, 4, 5], periodos: [{ hora_inicio: '08:00', hora_fim: '12:00', duracao_minutos: 50, intervalo_minutos: 10 }] },
+  });
+  expect(state.recorrentes.filter((item) => item.id >= 100)).toHaveLength(5);
+  await expect(page.locator('.schedule-week-summary')).toContainText('28');
+  await expect(page.locator('.schedule-weekday').filter({ hasText: 'Segunda-feira' }).getByText('Manhã', { exact: true })).toBeVisible();
 });
 
 test('conflito 409 preserva os campos e permite corrigir o período sem cancelar a consulta', async ({ page }) => {

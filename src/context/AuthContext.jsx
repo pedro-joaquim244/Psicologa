@@ -29,7 +29,9 @@ export function AuthProvider({ children }) {
     isPatient: Boolean(session.token && session.user?.tipo === 'paciente'),
     async login(credentials, audience = 'profissional') {
       const data = await (audience === 'paciente' ? loginPatient(credentials) : loginAdmin(credentials));
-      if (!data?.verificacaoPendente || !data?.desafio) throw new Error('Não foi possível iniciar a verificação do e-mail.');
+      if (!data?.token || !data?.usuario?.email_verificado) throw new Error('A API retornou uma sessão inválida.');
+      saveStoredSession(data.token, data.usuario);
+      setSessions(readSessions());
       return data;
     },
     async register(details) {

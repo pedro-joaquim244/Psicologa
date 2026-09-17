@@ -31,7 +31,7 @@ test('entrada e cadastro ficam acessíveis em notebook, celular e paisagem', asy
 test('erros e confirmação de e-mail permanecem acessíveis em uma tela baixa', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'Estados compactos executados uma vez.');
   await page.route('**/api/pacientes/cadastro', route => route.fulfill({ status: 409, json: { erro: 'Já existe uma conta com esse e-mail.' } }));
-  await page.route('**/api/pacientes/login', route => route.fulfill({ json: { verificacaoPendente: true, desafio: 'a'.repeat(64), email: 'paciente@example.com', expiraEm: Date.now() + 600000, reenviarEm: Date.now() + 60000 } }));
+  await page.route('**/api/pacientes/login', route => route.fulfill({ status: 403, json: { erro: 'Confirme seu e-mail antes de entrar.', codigo: 'EMAIL_NAO_VERIFICADO', verificacaoPendente: true, desafio: 'a'.repeat(64), email: 'paciente@example.com', expiraEm: Date.now() + 600000, reenviarEm: Date.now() + 60000 } }));
   for (const [width, height] of [[320,568], [375,367], [667,375]]) {
     await page.setViewportSize({ width, height });
     await page.goto('/cadastro');

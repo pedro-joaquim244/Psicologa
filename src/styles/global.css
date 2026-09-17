@@ -31,9 +31,9 @@
   --space-sm: 1rem;
   --space-md: 1.5rem;
   --space-lg: 2.5rem;
-  --space-xl: 4rem;
-  --space-section: clamp(5rem, 10vw, 10rem);
-  --space-impact: clamp(6rem, 13vw, 13rem);
+  --space-xl: 3.5rem;
+  --space-section: clamp(4.5rem, 7.5vw, 7.5rem);
+  --space-impact: clamp(5rem, 9vw, 9rem);
   --border-rule: 1px solid var(--color-border);
   --ease-editorial: cubic-bezier(.22, .61, .36, 1);
   --duration-hover: 260ms;
@@ -139,7 +139,7 @@ em { font-weight: 400; }
   .credentials-list > div:nth-child(3) { padding-left: 0; border: 0; }
 }
 @media (max-width: 650px) {
-  :root { --gutter: 20px; --fs-display: clamp(2.65rem, 11vw, 4rem); --fs-display-xl: clamp(3.15rem, 13.8vw, 5rem); --fs-heading: clamp(2rem, 8.5vw, 3rem); --space-section: 5rem; --space-impact: 6rem; }
+  :root { --gutter: 20px; --fs-display: clamp(2.65rem, 11vw, 4rem); --fs-display-xl: clamp(3.15rem, 13.8vw, 5rem); --fs-heading: clamp(2rem, 8.5vw, 3rem); --space-section: 4rem; --space-impact: 5rem; }
   .credentials-list { grid-template-columns: 1fr; gap: 0; }
   .credentials-list > div, .credentials-list > div:first-child, .credentials-list > div:nth-child(3) { padding: var(--space-md) 0; border: 0; border-bottom: var(--border-rule); }
   .credentials-list dd { font-size: 2rem; }
@@ -148,7 +148,7 @@ em { font-weight: 400; }
   .label-rule { width: 24px; flex-basis: 24px; }
   .immersive-section { height: 610px; min-height: 0; }
   .immersive-copy { padding-block: var(--space-xl) var(--space-lg); }
-  .audience-list { --audience-gap: var(--space-sm); }
+  .audience-list { --audience-gap: var(--space-sm); margin-top: var(--space-lg); }
   .audience-panel p { padding-right: var(--space-sm); }
 }
 @media (max-width: 575px) { html { scroll-padding-top: 90px; } }

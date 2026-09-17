@@ -2,13 +2,15 @@ import { clearSessionForToken } from "./authStorage";
 
 export const API_URL = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://localhost:3333" : "")).replace(/\/$/, "");
 export const AUTH_EXPIRED_EVENT = "psicologa:auth-expired";
+export const RATE_LIMIT_MESSAGE = "Você realizou muitas ações em pouco tempo. Aguarde alguns instantes e tente novamente.";
 
 export class ApiError extends Error {
-  constructor(message, status = 0, data = null) {
+  constructor(message, status = 0, data = null, retryAfter = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.data = data;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -45,8 +47,12 @@ async function apiRequest(path, { token, body, headers, ...options } = {}) {
   }
 
   if (!response.ok) {
-    const message = data?.erro || data?.mensagem || data?.message || "Não foi possível concluir a solicitação.";
-    throw new ApiError(message, response.status, data);
+    const retryAfterValue = Number(response.headers.get("retry-after"));
+    const retryAfter = Number.isFinite(retryAfterValue) && retryAfterValue > 0 ? retryAfterValue : null;
+    const message = response.status === 429
+      ? (data?.erro || RATE_LIMIT_MESSAGE)
+      : (data?.erro || data?.mensagem || data?.message || "Não foi possível concluir a solicitação.");
+    throw new ApiError(message, response.status, data, retryAfter);
   }
 
   if (data === null || !contentType.includes("application/json")) throw new ApiError("A API retornou uma resposta inesperada. Tente novamente.");
@@ -96,8 +102,9 @@ export function verifyEmail(details, audience) {
   return apiRequest(`/api/${audience === 'paciente' ? 'pacientes' : 'auth'}/verificar-email`, { method: 'POST', body: details });
 }
 
-export function resendEmailCode(desafio, audience) {
-  return apiRequest(`/api/${audience === 'paciente' ? 'pacientes' : 'auth'}/reenviar-codigo`, { method: 'POST', body: { desafio } });
+export function resendEmailCode(request, audience) {
+  const body = typeof request === 'string' ? { desafio: request } : request;
+  return apiRequest(`/api/${audience === 'paciente' ? 'pacientes' : 'auth'}/reenviar-codigo`, { method: 'POST', body });
 }
 
 export async function listPatientAppointments(token, options = {}) {

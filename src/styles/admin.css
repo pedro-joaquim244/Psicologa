@@ -1,6 +1,5 @@
 .admin-page {
   min-height: 100svh;
-  overflow-x: clip;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--sans);
