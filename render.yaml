@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: agenda-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    # Keep publication manual until secrets, demo credentials and CORS are reviewed.
+    autoDeployTrigger: off
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_CLIENT
+        value: postgres
+      - key: DATABASE_SSL
+        value: require
+      - key: DB_POOL_MAX
+        value: "5"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: RATE_LIMIT_STORE
+        value: memory
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: FRONTEND_URL
+        sync: false
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false

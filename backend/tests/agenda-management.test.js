@@ -387,6 +387,21 @@ test('a professional cannot discover or change another professional appointment'
   assert.equal(allowed.status, 200);
 });
 
+test('recusa e reagendamento administrativos preservam as regras de agenda', async () => {
+  await insertAppointment({ id: 701, status: 'agendado', inicio: `${date} 14:00:00`, fim: `${date} 14:50:00` });
+  const declined = await request('/agendamentos/701/recusar', { method: 'PATCH' });
+  assert.equal(declined.status, 200, JSON.stringify(declined.data));
+  const [[declinedRow]] = await connection.query('SELECT status FROM agendamentos WHERE id = 701');
+  assert.equal(declinedRow.status, 'cancelado');
+
+  await insertAppointment({ id: 702, status: 'confirmado', inicio: `${date} 14:00:00`, fim: `${date} 14:50:00` });
+  const moved = await request('/agendamentos/702/reagendar', { method: 'PATCH', body: { data: date, horario: '16:00', modalidade: 'presencial' } });
+  assert.equal(moved.status, 200, JSON.stringify(moved.data));
+  assert.deepEqual(moved.data.agendamento, { id: 702, inicio: `${date} 16:00:00`, fim: `${date} 16:50:00`, modalidade: 'presencial', status: 'confirmado' });
+  const [[movedRow]] = await connection.query('SELECT inicio, fim, modalidade, status FROM agendamentos WHERE id = 702');
+  assert.deepEqual(movedRow, { inicio: `${date} 16:00:00`, fim: `${date} 16:50:00`, modalidade: 'presencial', status: 'confirmado' });
+});
+
 test('calendário, relógio, duração, intervalo e identificadores inválidos são rejeitados sem alterar a agenda', async () => {
   for (const body of [extra({ data: '2035-02-30' }), extra({ data: '2020-01-01' }), extra({ data: ['2035-09-18'] }), extra({ hora_inicio: '25:00' }), extra({ hora_fim: '18:00' }), extra({ hora_fim: '17:59' }), extra({ tipo: 'inexistente' }), extra({ profissional_id: '1 OR 1=1' }), recurring({ dia_semana: 7 }), recurring({ dia_semana: -1 }), recurring({ duracao_minutos: 0 }), recurring({ duracao_minutos: 300 }), recurring({ intervalo_minutos: -1 }), recurring({ duracao_minutos: 30.5 })]) {
     const result = await request('/agenda/disponibilidades', { method: 'POST', body });

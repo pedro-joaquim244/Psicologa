@@ -36,12 +36,17 @@ export function createEmailVerification({ database = db, send = sendLoginCode, n
       const id = randomBytes(32).toString('hex');
       const code = String(randomInt(0, 1000000)).padStart(6, '0');
       const expires = time + 10 * 60 * 1000;
+      const upsert = connection.dialect === 'postgres'
+        ? `ON CONFLICT (perfil, usuario_id) DO UPDATE SET desafio = EXCLUDED.desafio, email = EXCLUDED.email,
+          codigo_hash = EXCLUDED.codigo_hash, expira_em = EXCLUDED.expira_em, reenviar_em = EXCLUDED.reenviar_em,
+          janela_ate = EXCLUDED.janela_ate, envios = EXCLUDED.envios, tentativas = EXCLUDED.tentativas, consumido = 0`
+        : `ON DUPLICATE KEY UPDATE desafio = VALUES(desafio), email = VALUES(email), codigo_hash = VALUES(codigo_hash),
+          expira_em = VALUES(expira_em), reenviar_em = VALUES(reenviar_em), janela_ate = VALUES(janela_ate),
+          envios = VALUES(envios), tentativas = VALUES(tentativas), consumido = 0`;
       await connection.query(`INSERT INTO verificacoes_email
         (perfil, usuario_id, desafio, email, codigo_hash, expira_em, reenviar_em, janela_ate, envios, tentativas, consumido)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-        ON DUPLICATE KEY UPDATE desafio = VALUES(desafio), email = VALUES(email), codigo_hash = VALUES(codigo_hash),
-        expira_em = VALUES(expira_em), reenviar_em = VALUES(reenviar_em), janela_ate = VALUES(janela_ate),
-        envios = VALUES(envios), tentativas = VALUES(tentativas), consumido = 0`,
+        ${upsert}`,
       [kind, userId, id, user.email, digest(id, code), expires, time + 60000,
         activeWindow ? old.janela_ate : time + 15 * 60 * 1000, activeWindow ? old.envios + 1 : 1, activeWindow ? old.tentativas : 0]);
       try { await send(user.email, code); }

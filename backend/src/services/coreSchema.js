@@ -107,4 +107,25 @@ export async function ensureCoreSchema(connection = db) {
     CONSTRAINT fk_agendamento_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
     CONSTRAINT fk_agendamento_profissional FOREIGN KEY (profissional_id) REFERENCES profissionais(id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+  await connection.query(`CREATE TABLE IF NOT EXISTS notificacoes_agendamento (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    agendamento_id INT UNSIGNED NOT NULL,
+    tipo VARCHAR(32) NOT NULL,
+    destinatario VARCHAR(255) NULL,
+    status VARCHAR(24) NOT NULL DEFAULT 'pendente',
+    event_key VARCHAR(180) NOT NULL,
+    dados JSON NOT NULL,
+    tentativas TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    ultima_tentativa_em TIMESTAMP NULL DEFAULT NULL,
+    enviado_em TIMESTAMP NULL DEFAULT NULL,
+    proxima_tentativa_em TIMESTAMP NULL DEFAULT NULL,
+    erro VARCHAR(255) NULL,
+    criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_notificacao_evento (event_key),
+    INDEX idx_notificacao_retentativa (status, proxima_tentativa_em),
+    INDEX idx_notificacao_agendamento (agendamento_id),
+    CONSTRAINT fk_notificacao_agendamento FOREIGN KEY (agendamento_id) REFERENCES agendamentos(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 }

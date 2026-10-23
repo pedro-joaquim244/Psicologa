@@ -14,7 +14,12 @@ export function createApp({ frontendUrl = process.env.FRONTEND_URL, production =
   const app = express();
   app.disable('x-powered-by');
   // Configure apenas IPs/sub-redes de proxies confiáveis da infraestrutura.
-  if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY.split(',').map((value) => value.trim()));
+  if (process.env.TRUST_PROXY) {
+    const configuredTrust = process.env.TRUST_PROXY.trim();
+    app.set('trust proxy', /^\d+$/.test(configuredTrust)
+      ? Number(configuredTrust)
+      : configuredTrust.split(',').map((value) => value.trim()));
+  }
   const origins = new Set((frontendUrl || (production ? '' : 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173')).split(',').filter(Boolean).map((value) => {
     const url = new URL(value.trim());
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new Error('FRONTEND_URL deve conter somente origens HTTP(S), separadas por vírgula.');
@@ -36,6 +41,15 @@ export function createApp({ frontendUrl = process.env.FRONTEND_URL, production =
   app.use('/api', globalApiLimiter);
   app.use(express.json({ limit: '32kb' }));
   app.get('/', (_req, res) => res.json({ mensagem: 'API da agenda funcionando!' }));
+  app.get('/api/health', async (_req, res) => {
+    try {
+      await db.query('SELECT 1');
+      res.json({ status: 'ok' });
+    } catch (error) {
+      console.error('Falha na verificação de saúde da API:', error?.name || 'unknown error');
+      res.status(503).json({ status: 'unavailable' });
+    }
+  });
   // This diagnostic endpoint is useful locally, but must not expose database
   // state or accept anonymous traffic in production.
   if (!production) app.get('/api/teste-banco', async (_req, res) => {

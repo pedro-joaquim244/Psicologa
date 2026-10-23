@@ -107,9 +107,11 @@ export function serializeBlock(row) {
 }
 
 export async function loadDayBlocks(connection, date, id, { privateDetails = false } = {}) {
+  const dayStart = `${date} 00:00:00`;
+  const dayEnd = `${nextDate(date)} 00:00:00`;
   const [rows] = await connection.query(`SELECT ${privateDetails ? 'id, profissional_id, motivo, ' : ''}inicio, fim, dia_semana, hora_inicio, hora_fim
     FROM bloqueios_agenda WHERE profissional_id = ? AND
-    ((inicio < DATE_ADD(?, INTERVAL 1 DAY) AND fim > CONCAT(?, ' 00:00:00')) OR (inicio IS NULL AND dia_semana = ?))`, [id, date, date, weekday(date)]);
+    ((inicio < ? AND fim > ?) OR (inicio IS NULL AND dia_semana = ?))`, [id, dayEnd, dayStart, weekday(date)]);
   return rows.map((row) => row.dia_semana != null ? recurringOccurrence(row, date) : row).sort((a, b) => a.inicio.localeCompare(b.inicio));
 }
 
@@ -125,9 +127,11 @@ export async function loadDayAvailability(connection, date, id) {
 
 export async function loadDaySchedule(connection, date, id, { privateDetails = false } = {}) {
   const availability = await loadDayAvailability(connection, date, id);
+  const dayStart = `${date} 00:00:00`;
+  const dayEnd = `${nextDate(date)} 00:00:00`;
   const [appointments] = await connection.query(`SELECT inicio, fim FROM agendamentos WHERE profissional_id = ?
-    AND inicio < DATE_ADD(?, INTERVAL 1 DAY) AND fim > CONCAT(?, ' 00:00:00')
-    AND status IN ('agendado', 'confirmado')`, [id, date, date]);
+    AND inicio < ? AND fim > ?
+    AND status IN ('agendado', 'confirmado')`, [id, dayEnd, dayStart]);
   const blocks = await loadDayBlocks(connection, date, id, { privateDetails });
   const now = clinicNow();
   const horarios = generateSlots(availability).filter((slot) => {
@@ -142,9 +146,12 @@ export async function loadDaySchedule(connection, date, id, { privateDetails = f
 // uma consulta por data para exibir as próximas exceções no calendário.
 export async function loadUpcomingExceptions(connection, id, limit = 8) {
   const now = clinicNow();
+  const today = now.slice(0, 10);
+  const currentTime = now.slice(11);
   const [extras] = await connection.query(`SELECT id, data_especifica, hora_inicio, hora_fim
     FROM disponibilidades WHERE profissional_id = ? AND ativo = 1 AND data_especifica IS NOT NULL
-    AND TIMESTAMP(data_especifica, hora_fim) > ? ORDER BY data_especifica, hora_inicio, id LIMIT 20`, [id, now]);
+    AND (data_especifica > ? OR (data_especifica = ? AND hora_fim > ?))
+    ORDER BY data_especifica, hora_inicio, id LIMIT 20`, [id, today, today, currentTime]);
   const [blocks] = await connection.query(`SELECT id, inicio, fim, motivo FROM bloqueios_agenda
     WHERE profissional_id = ? AND inicio IS NOT NULL AND fim > ? ORDER BY inicio, id LIMIT 20`, [id, now]);
   return [
@@ -233,8 +240,13 @@ export async function assertAvailabilityCompatible(connection, window, ignoredId
       throw new AgendaError('Existe uma consulta marcada neste período com início ou duração diferente.', 409);
     }
   }
+  const now = clinicNow();
+  const today = now.slice(0, 10);
+  const currentTime = now.slice(11);
   const [extras] = await connection.query(`SELECT hora_inicio, hora_fim FROM disponibilidades WHERE profissional_id = ? AND ativo = 1
-    AND data_especifica IS NOT NULL AND TIMESTAMP(data_especifica, hora_fim) > ? AND dia_semana = ? AND id != ?`, [id, clinicNow(), window.dia_semana, ignoredId]);
+    AND data_especifica IS NOT NULL
+    AND (data_especifica > ? OR (data_especifica = ? AND hora_fim > ?))
+    AND dia_semana = ? AND id != ?`, [id, today, today, currentTime, window.dia_semana, ignoredId]);
   for (const extra of extras) {
     if (slots.some((slot) => overlaps(slot.horario, slot.fim, clock(extra.hora_inicio), clock(extra.hora_fim)) && (slot.horario !== clock(extra.hora_inicio) || slot.fim !== clock(extra.hora_fim)))) {
       throw new AgendaError('Existe um horário extra incompatível em uma das próximas datas desse dia da semana.', 409);
