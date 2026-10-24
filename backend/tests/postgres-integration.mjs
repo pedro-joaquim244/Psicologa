@@ -22,6 +22,9 @@ if (db.dialect !== 'postgres') throw new Error('Este teste exige DB_CLIENT=postg
 const runId = randomUUID();
 const marker = `codex-pg-${runId}`;
 const password = randomBytes(24).toString('base64url');
+const previousDemoMode = process.env.DEMO_MODE;
+const previousDemoProfessionalEmail = process.env.DEMO_PROFESSIONAL_EMAIL;
+const previousPublicProfessionalId = process.env.PUBLIC_PROFESSIONAL_ID;
 const ids = { professional: null, admin: null, patients: [], availability: [], appointments: [], blocks: [], emails: [] };
 const results = {};
 let server;
@@ -140,6 +143,9 @@ async function cleanup() {
 
 try {
   const fixture = await insertFixture();
+  process.env.DEMO_MODE = 'true';
+  process.env.DEMO_PROFESSIONAL_EMAIL = fixture.professionalEmail;
+  delete process.env.PUBLIC_PROFESSIONAL_ID;
   const app = createApp({ production: false });
   server = app.listen(0, '127.0.0.1');
   await new Promise((resolve, reject) => {
@@ -156,14 +162,15 @@ try {
   assert.equal(professionalLogin.status, 200);
   results.authentication = 'ok';
 
-  const schedule = await request(origin, `/horarios?data=${fixture.date}&profissional_id=${ids.professional}`);
+  const schedule = await request(origin, `/horarios?data=${fixture.date}`);
   assert.equal(schedule.status, 200);
   assert.deepEqual(schedule.data.horarios.map((slot) => slot.horario), ['09:00', '10:00', '11:00']);
+  results.publicProfessionalResolution = 'ok';
   results.availability = 'ok';
 
   const booking = await request(origin, '/agendamentos', {
     method: 'POST', token: patientALogin.data.token,
-    body: { data: fixture.date, horario: '09:00', modalidade: 'online', profissional_id: ids.professional },
+    body: { data: fixture.date, horario: '09:00', modalidade: 'online' },
   });
   assert.equal(booking.status, 201);
   ids.appointments.push(booking.data.agendamento.id);
@@ -224,6 +231,12 @@ try {
   results.adminAgenda = 'ok';
 } finally {
   if (server) await new Promise((resolve) => server.close(resolve));
+  if (previousDemoMode === undefined) delete process.env.DEMO_MODE;
+  else process.env.DEMO_MODE = previousDemoMode;
+  if (previousDemoProfessionalEmail === undefined) delete process.env.DEMO_PROFESSIONAL_EMAIL;
+  else process.env.DEMO_PROFESSIONAL_EMAIL = previousDemoProfessionalEmail;
+  if (previousPublicProfessionalId === undefined) delete process.env.PUBLIC_PROFESSIONAL_ID;
+  else process.env.PUBLIC_PROFESSIONAL_ID = previousPublicProfessionalId;
   await cleanup();
   const [remaining] = await db.query(
     `SELECT

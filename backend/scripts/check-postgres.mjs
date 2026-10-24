@@ -56,7 +56,7 @@ try {
   const { port } = server.address();
   const [healthResponse, scheduleResponse] = await Promise.all([
     fetch(`http://127.0.0.1:${port}/api/health`),
-    fetch(`http://127.0.0.1:${port}/api/horarios?data=2035-09-18&profissional_id=1`),
+    fetch(`http://127.0.0.1:${port}/api/horarios?data=2035-09-18`),
   ]);
   const health = await healthResponse.json();
   const schedule = await scheduleResponse.json();
@@ -72,6 +72,7 @@ try {
     healthBodyStatus: health.status,
     scheduleStatus: scheduleResponse.status,
     scheduleContractOk: schedule.data === '2035-09-18' && Array.isArray(schedule.horarios),
+    scheduleSlots: Array.isArray(schedule.horarios) ? schedule.horarios.length : 0,
     warnings: warnings.map((warning) => warning.message),
   };
   console.log(JSON.stringify(result, null, 2));
@@ -79,6 +80,7 @@ try {
   if (!schemaOk || Number(tableRows[0].total) !== expectedTables.length
       || healthResponse.status !== 200 || health.status !== 'ok'
       || scheduleResponse.status !== 200 || !result.scheduleContractOk
+      || (process.env.DEMO_MODE === 'true' && result.scheduleSlots === 0)
       || warnings.some((warning) => warning.message.includes('already executing a query'))) {
     process.exitCode = 1;
   }

@@ -15,6 +15,9 @@ frontend em sua hospedagem atual e não abre conexões SMTP nem chamadas ao Rese
   JWT seguro das rotas normais, mas somente para as duas contas fictícias exatas.
 - O acesso demonstrativo nunca concede o papel global `admin`; a conta
   profissional usa `psicologa` e permanece limitada ao próprio `profissional_id`.
+- A agenda pública resolve a profissional pelo e-mail fictício verificado em vez
+  de presumir que seu identificador no banco seja `1`. O mesmo ID resolvido é
+  usado na consulta de horários e dentro da transação de reserva.
 
 As contas usam `paciente.demo@example.invalid` e
 `profissional.demo@example.invalid`, estão verificadas e têm hashes de senhas
@@ -32,6 +35,9 @@ Cadastre manualmente no Render apenas:
 - `DATABASE_URL`: URL secreta do Session pooler do Supabase;
 - `JWT_SECRET`: valor aleatório com pelo menos 32 bytes;
 - `FRONTEND_URL`: origem HTTPS exata do frontend, sem caminho.
+
+`PUBLIC_PROFESSIONAL_ID` é opcional. No modo demonstrativo, deixe-o vazio para
+que a API localize automaticamente a conta definida em `DEMO_PROFESSIONAL_EMAIL`.
 
 Após o Render fornecer a URL `https://<servico>.onrender.com`, configure no
 frontend `VITE_API_URL` com essa origem, sem `/api`, e gere um novo build.

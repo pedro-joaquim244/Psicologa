@@ -11,6 +11,7 @@ import { bookingLimiter, writeLimiter } from '../middlewares/limitAuth.js';
 import { clinicNow, generateSlots, validDate, validId, validTime } from '../utils/scheduling.js';
 import { loadDayAvailability, loadDayBlocks, overlaps } from '../services/agenda.js';
 import { appointmentNotifications, dispatchAppointmentNotification } from '../services/appointmentNotifications.js';
+import { resolvePublicProfessionalId } from '../services/publicProfessional.js';
 const router = express.Router();
 router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 router.param('id', (req, res, next, id) => validId(id) ? next() : res.status(400).json({ erro: 'Agendamento inválido.' }));
@@ -67,7 +68,7 @@ router.post("/", autenticarToken, somentePaciente, bookingLimiter, async (req, r
       data,
       horario,
       modalidade,
-      profissional_id = 1,
+      profissional_id: requestedProfessionalId,
     } = req.body || {};
     const { nome, email, telefone } = req.paciente;
 
@@ -96,13 +97,14 @@ router.post("/", autenticarToken, somentePaciente, bookingLimiter, async (req, r
     }
 
 
-    if (!validDate(data) || !validTime(horario) || !validId(profissional_id)) {
+    if (!validDate(data) || !validTime(horario) || (requestedProfessionalId != null && !validId(requestedProfessionalId))) {
       return res.status(400).json({ erro: 'Confira a data, o horário e o profissional.' });
     }
     if (data + ' ' + horario + ':00' <= clinicNow()) {
       return res.status(400).json({ erro: 'Esse horário já passou. Escolha outro horário.' });
     }
     await conexao.beginTransaction();
+    const profissional_id = await resolvePublicProfessionalId(conexao, requestedProfessionalId);
     // Lock persistente no banco: cobre instâncias diferentes da API e intervalos
     // sobrepostos, mesmo quando seus horários de início são diferentes.
     const [[profissional]] = await conexao.query('SELECT id FROM profissionais WHERE id = ? AND ativo = 1 FOR UPDATE', [profissional_id]);
@@ -255,6 +257,10 @@ router.post("/", autenticarToken, somentePaciente, bookingLimiter, async (req, r
       return res.status(409).json({
         erro: "Este horário já foi reservado.",
       });
+    }
+
+    if (error.status) {
+      return res.status(error.status).json({ erro: error.message });
     }
 
 
