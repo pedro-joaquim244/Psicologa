@@ -12,6 +12,8 @@ test('converts positional placeholders while preserving quoted question marks', 
 });
 
 test('uses PostgreSQL ON CONFLICT for email verification state', async () => {
+  const previousJwtSecret = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = 'postgres-compat-test-secret-not-for-production';
   const calls = [];
   const connection = {
     dialect: 'postgres',
@@ -24,9 +26,14 @@ test('uses PostgreSQL ON CONFLICT for email verification state', async () => {
     },
   };
   const database = { dialect: 'postgres', getConnection: async () => connection };
-  const verification = createEmailVerification({ database, send: async () => {}, now: () => 1_700_000_000_000 });
-  await verification.issue('paciente', 7);
-  assert.match(calls.find((sql) => sql.startsWith('INSERT INTO verificacoes_email')), /ON CONFLICT \(perfil, usuario_id\)/);
+  try {
+    const verification = createEmailVerification({ database, send: async () => {}, now: () => 1_700_000_000_000 });
+    await verification.issue('paciente', 7);
+    assert.match(calls.find((sql) => sql.startsWith('INSERT INTO verificacoes_email')), /ON CONFLICT \(perfil, usuario_id\)/);
+  } finally {
+    if (previousJwtSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = previousJwtSecret;
+  }
 });
 
 test('uses PostgreSQL conflict handling and interval arithmetic for notifications', async () => {
