@@ -80,6 +80,7 @@ async function insertFixture() {
   const verification = createEmailVerification({
     database: db,
     send: async (_email, code) => { verificationCode = code; },
+    deliveryAvailable: () => true,
   });
   const challenge = await verification.issue('paciente', patientA.insertId);
   const verifiedSession = await verification.verify('paciente', challenge.desafio, verificationCode);

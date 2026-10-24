@@ -5,8 +5,8 @@ services:
     plan: free
     rootDir: backend
     buildCommand: npm ci
-    startCommand: npm start
-    # Keep publication manual until secrets, demo credentials and CORS are reviewed.
+    startCommand: npm run start:demo
+    # Keep publication manual until DATABASE_URL, JWT_SECRET and CORS are reviewed.
     autoDeployTrigger: off
     healthCheckPath: /api/health
     envVars:
@@ -22,6 +22,14 @@ services:
         value: "1"
       - key: RATE_LIMIT_STORE
         value: memory
+      - key: DEMO_MODE
+        value: "true"
+      - key: DEMO_AUTO_PROVISION
+        value: "true"
+      - key: DEMO_PUBLIC_LOGIN
+        value: "true"
+      - key: PUBLIC_REGISTRATION_ENABLED
+        value: "false"
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
@@ -31,8 +39,4 @@ services:
       - key: FRONTEND_URL
         sync: false
       - key: EMAIL_PROVIDER
-        value: resend
-      - key: RESEND_API_KEY
-        sync: false
-      - key: EMAIL_FROM
-        sync: false
+        value: disabled

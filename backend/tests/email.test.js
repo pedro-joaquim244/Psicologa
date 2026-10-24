@@ -59,6 +59,23 @@ test('does not mark an ambiguous Resend response as sent', async (context) => {
   );
 });
 
+test('demo mode blocks every external email provider before network access', async (context) => {
+  const previous = { demo: process.env.DEMO_MODE, provider: process.env.EMAIL_PROVIDER, fetch: globalThis.fetch };
+  context.after(() => {
+    if (previous.demo === undefined) delete process.env.DEMO_MODE; else process.env.DEMO_MODE = previous.demo;
+    if (previous.provider === undefined) delete process.env.EMAIL_PROVIDER; else process.env.EMAIL_PROVIDER = previous.provider;
+    globalThis.fetch = previous.fetch;
+  });
+  process.env.DEMO_MODE = 'true';
+  process.env.EMAIL_PROVIDER = 'resend';
+  globalThis.fetch = async () => { throw new Error('network must not be called'); };
+
+  await assert.rejects(
+    sendEmailMessage('paciente@example.test', { subject: 'Teste', text: 'Texto', html: '<p>Texto</p>' }),
+    /EMAIL_DELIVERY_DISABLED/,
+  );
+});
+
 test('escapes dynamic content before placing it in HTML', () => {
   const message = buildLoginCodeEmail('<script>alert("x")</script>');
 

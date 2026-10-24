@@ -137,21 +137,16 @@ específicos do MySQL. `test:postgres` é a comprovação de compatibilidade rem
 
 O provisionador é idempotente e aceita somente e-mails no domínio reservado
 `@example.invalid`. Ele cria uma conta profissional, uma conta de paciente,
-agenda recorrente de segunda a sexta e uma consulta futura fictícia. As senhas
-entram exclusivamente por variáveis de ambiente e nunca são impressas.
+agenda recorrente de segunda a sexta e uma consulta futura fictícia. Se senhas
+não forem informadas, ele gera hashes aleatórios que nunca são impressos; o modo
+demo usa rotas específicas para emitir o mesmo JWT seguro da aplicação.
 
 ```powershell
 Set-Location backend
-$env:DEMO_PROFESSIONAL_EMAIL='profissional.demo@example.invalid'
-$env:DEMO_PROFESSIONAL_PASSWORD='<senha-ficticia-forte>'
-$env:DEMO_PATIENT_EMAIL='paciente.demo@example.invalid'
-$env:DEMO_PATIENT_PASSWORD='<outra-senha-ficticia-forte>'
 $env:ALLOW_REMOTE_DEMO_SEED='true'
 npm run demo:provision
 Remove-Item Env:ALLOW_REMOTE_DEMO_SEED
-Remove-Item Env:DEMO_PROFESSIONAL_PASSWORD
-Remove-Item Env:DEMO_PATIENT_PASSWORD
 ```
 
-Revise os e-mails e as senhas antes da execução. O script não envia mensagens,
-não recria o schema e não acessa o MySQL.
+O script não envia mensagens, não recria o schema e não acessa o MySQL. Para a
+demonstração hospedada, consulte `docs/demonstracao-gratuita.md`.

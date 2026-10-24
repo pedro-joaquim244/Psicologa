@@ -27,6 +27,35 @@ test('database diagnostic is not exposed in production', async () => {
   assert.equal(response.status, 404);
   assert.deepEqual(await response.json(), { erro: 'Rota não encontrada.' });
 });
+test('demo mode exposes only safe flags and blocks public registration before database access', async (context) => {
+  const names = ['DEMO_MODE', 'DEMO_PUBLIC_LOGIN', 'PUBLIC_REGISTRATION_ENABLED', 'EMAIL_PROVIDER'];
+  const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+  context.after(() => {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  });
+  process.env.DEMO_MODE = 'true';
+  process.env.DEMO_PUBLIC_LOGIN = 'true';
+  process.env.PUBLIC_REGISTRATION_ENABLED = 'true';
+  process.env.EMAIL_PROVIDER = 'resend';
+
+  const configResponse = await fetch(origin + '/api/config');
+  assert.equal(configResponse.status, 200);
+  assert.deepEqual(await configResponse.json(), {
+    demoMode: true,
+    emailDelivery: false,
+    publicRegistration: false,
+    demoAccess: { paciente: true, profissional: true },
+  });
+  const registration = await fetch(origin + '/api/pacientes/cadastro', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nome: 'Cadastro Bloqueado', email: 'novo@example.invalid', telefone: '11900000000', senha: 'SenhaTeste123!' }),
+  });
+  assert.equal(registration.status, 503);
+  assert.equal((await registration.json()).codigo, 'CADASTRO_INDISPONIVEL');
+});
 test('preflight permite excluir horários com Authorization a partir do frontend autorizado', async () => {
   const response = await fetch(origin + '/api/agenda/bloqueios/1', {
     method: 'OPTIONS',

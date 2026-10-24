@@ -2,13 +2,14 @@ import { createHmac, randomInt, randomBytes, timingSafeEqual } from 'node:crypto
 import db from '../database.js';
 import { sendLoginCode } from './email.js';
 import { createAuthenticatedSession } from './authentication.js';
+import { emailDeliveryEnabled } from '../config/runtime.js';
 
 const tables = { paciente: 'pacientes', profissional: 'usuarios_admin' };
 const MAX_EMAIL_SENDS_PER_WINDOW = 3;
 const MAX_CODE_ATTEMPTS_PER_WINDOW = 5;
 const fail = (status, message, retryAfter) => Object.assign(new Error(message), { status, retryAfter });
 const digest = (id, code) => createHmac('sha256', process.env.JWT_SECRET).update(`${id}:${code}`).digest('hex');
-export function createEmailVerification({ database = db, send = sendLoginCode, now = Date.now } = {}) {
+export function createEmailVerification({ database = db, send = sendLoginCode, now = Date.now, deliveryAvailable = emailDeliveryEnabled } = {}) {
   async function transaction(action) {
     const connection = await database.getConnection();
     try {
@@ -23,6 +24,7 @@ export function createEmailVerification({ database = db, send = sendLoginCode, n
 
   async function issue(kind, userId, previousId) {
     if (!tables[kind]) throw fail(400, 'Acesso inválido.');
+    if (!deliveryAvailable()) throw fail(503, 'A verificação por e-mail está temporariamente indisponível.');
     return transaction(async (connection) => {
       const [[user]] = await connection.query(`SELECT * FROM ${tables[kind]} WHERE id = ? FOR UPDATE`, [userId]);
       if (!user?.ativo) throw fail(401, 'Entre novamente para solicitar um código.');

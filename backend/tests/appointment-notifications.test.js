@@ -45,6 +45,18 @@ test('never sends demonstration notifications to the reserved invalid domain', a
   assert.equal(database.calls.length, 1);
 });
 
+test('marks notifications as disabled without contacting a provider in demo mode', async (context) => {
+  const previous = process.env.DEMO_MODE;
+  context.after(() => { if (previous === undefined) delete process.env.DEMO_MODE; else process.env.DEMO_MODE = previous; });
+  process.env.DEMO_MODE = 'true';
+  const database = databaseFor(null);
+  const notifications = createAppointmentNotifications({ database, send: async () => { throw new Error('must not send'); } });
+  const queued = await notifications.queue(appointment, 'confirmacao');
+  assert.deepEqual(queued, { id: 41, queued: false, status: 'invalido' });
+  assert.equal(database.calls.length, 1);
+  assert.equal(database.calls[0].params.at(-1), 'EMAIL_DELIVERY_DISABLED');
+});
+
 test('records provider failures for a later retry without affecting the appointment', async () => {
   const database = databaseFor({ id: 41, tipo: 'confirmacao', destinatario: appointment.email_cliente, status: 'pendente', tentativas: 0, dados: JSON.stringify({}) });
   const notifications = createAppointmentNotifications({ database, send: async () => { const error = new Error('offline'); error.code = 'ETIMEDOUT'; throw error; } });

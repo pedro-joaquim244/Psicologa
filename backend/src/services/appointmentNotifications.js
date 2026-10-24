@@ -1,5 +1,6 @@
 import db from '../database.js';
 import { sendAppointmentEmail } from './email.js';
+import { emailDeliveryEnabled } from '../config/runtime.js';
 
 const MAX_ATTEMPTS = 3;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -38,8 +39,10 @@ export function createAppointmentNotifications({ database = db, send = sendAppoi
   async function queue(appointment, type) {
     if (!eventTypes.has(type)) throw new Error('INVALID_NOTIFICATION_EVENT');
     const recipient = String(appointment?.email_cliente || '').trim().toLowerCase();
-    const status = validRecipient(recipient) ? 'pendente' : 'invalido';
-    const error = status === 'invalido' ? 'INVALID_RECIPIENT' : null;
+    const recipientValid = validRecipient(recipient);
+    const deliveryEnabled = emailDeliveryEnabled();
+    const status = recipientValid && deliveryEnabled ? 'pendente' : 'invalido';
+    const error = status === 'pendente' ? null : recipientValid ? 'EMAIL_DELIVERY_DISABLED' : 'INVALID_RECIPIENT';
     const key = eventKey(appointment, type);
     const details = JSON.stringify(snapshot(appointment));
     if (database.dialect === 'postgres') {

@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { emailDeliveryEnabled } from '../config/runtime.js';
 
 const BRAND = {
   name: 'Helena Martins',
@@ -206,6 +207,7 @@ async function sendWithResend(to, message) {
 }
 
 export async function sendEmailMessage(to, message) {
+  if (!emailDeliveryEnabled()) throw new Error('EMAIL_DELIVERY_DISABLED');
   const provider = String(process.env.EMAIL_PROVIDER || (process.env.RESEND_API_KEY ? 'resend' : 'smtp')).toLowerCase();
   if (provider === 'resend') return sendWithResend(to, message);
   if (provider === 'smtp') return sendWithSmtp(to, message);

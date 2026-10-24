@@ -8,7 +8,9 @@ import authRoutes from './routes/auth.routes.js';
 import pacientesRoutes from './routes/pacientes.routes.js';
 import usuarioRoutes from './routes/usuario.routes.js';
 import agendaRoutes from './routes/agenda.routes.js';
+import demoRoutes from './routes/demo.routes.js';
 import { globalApiLimiter } from './middlewares/limitAuth.js';
+import { publicRegistrationEnabled, publicRuntimeConfig } from './config/runtime.js';
 
 export function createApp({ frontendUrl = process.env.FRONTEND_URL, production = process.env.NODE_ENV === 'production' } = {}) {
   const app = express();
@@ -41,6 +43,14 @@ export function createApp({ frontendUrl = process.env.FRONTEND_URL, production =
   app.use('/api', globalApiLimiter);
   app.use(express.json({ limit: '32kb' }));
   app.get('/', (_req, res) => res.json({ mensagem: 'API da agenda funcionando!' }));
+  app.get('/api/config', (_req, res) => res.json(publicRuntimeConfig()));
+  app.post('/api/pacientes/cadastro', (req, res, next) => {
+    if (publicRegistrationEnabled()) return next();
+    return res.status(503).json({
+      codigo: 'CADASTRO_INDISPONIVEL',
+      erro: 'Novos cadastros estão temporariamente indisponíveis nesta demonstração. Use a conta demonstrativa.',
+    });
+  });
   app.get('/api/health', async (_req, res) => {
     try {
       await db.query('SELECT 1');
@@ -62,6 +72,7 @@ export function createApp({ frontendUrl = process.env.FRONTEND_URL, production =
     }
   });
   app.use('/api/auth', authRoutes);
+  app.use('/api/demo', demoRoutes);
   app.use('/api/pacientes', pacientesRoutes);
   app.use('/api/usuario', usuarioRoutes);
   app.use('/api/horarios', horariosRoutes);

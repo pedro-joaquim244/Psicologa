@@ -1,6 +1,6 @@
 # Relatório de validação — Supabase/PostgreSQL e preparação do Render
 
-Data: 23/10/2026
+Atualizado em: 24/10/2026
 Branch: `feat/supabase-postgres-phase-1`
 
 ## 1. Correção do aviso PostgreSQL
@@ -58,8 +58,8 @@ foi executado. `supabase/seed.sql` continua destinado somente ao ambiente local.
 
 ## 4. Testes executados
 
-- `npm run test:unit`: 18/18 aprovados.
-- `DB_CLIENT=mysql npm run test:mysql`: 70/70 aprovados, usando banco de teste
+- `npm run test:unit`: 22/22 aprovados.
+- `DB_CLIENT=mysql npm run test:mysql`: 75/75 aprovados, usando banco de teste
   aleatório e tabelas temporárias; o banco MySQL original foi preservado.
 - `npm run test:postgres` no Supabase real: aprovado para verificação de e-mail,
   autenticação, disponibilidade, isolamento entre pacientes, ciclo de consulta,
@@ -68,6 +68,8 @@ foi executado. `supabase/seed.sql` continua destinado somente ao ambiente local.
   exatamente um HTTP 201 e um HTTP 409, restando uma única reserva ativa.
 - `npm run check:postgres`: conexão, fuso, oito tabelas, `/api/health` e
   `/api/horarios` aprovados; `warnings: []`.
+- `npm run start:demo`: provisionamento idempotente, health check, configuração
+  pública e os dois acessos demonstrativos aprovados no Supabase real.
 - Limpeza remota: zero registros nas oito tabelas e zero fixtures restantes.
 - Inicialização real: API respondeu `status: ok` na porta local configurada.
 - `npm run build`: build Vite aprovado.
@@ -80,19 +82,20 @@ teste. Nenhum dado MySQL foi importado.
 
 ## 5. Contas e agenda de demonstração
 
-O Supabase está vazio após a limpeza. Contas persistentes ainda não foram
-criadas porque as senhas fictícias não foram fornecidas. O comando
-`npm run demo:provision` está pronto e:
+O Supabase contém somente a demonstração fictícia preparada: uma profissional,
+uma conta profissional, uma paciente, cinco disponibilidades semanais e uma
+consulta futura. O comando `npm run demo:provision`:
 
 - exige `ALLOW_REMOTE_DEMO_SEED=true` apenas durante a execução;
 - aceita somente e-mails `@example.invalid`;
-- recebe senhas somente por variáveis de ambiente e não as imprime;
+- gera hashes de senhas aleatórios e não imprime credenciais;
 - cria/atualiza uma profissional, uma paciente, agenda de segunda a sexta e uma
   consulta futura confirmada;
 - não envia e-mail, não executa migration e não acessa o MySQL.
 
-O isolamento entre pacientes foi comprovado com duas contas temporárias no
-teste remoto: uma paciente não leu nem alterou a consulta da outra.
+O login público do modo demo não usa senha compartilhada: ele emite o JWT atual
+somente para os dois e-mails reservados e verificados. O isolamento entre
+pacientes também foi comprovado com duas contas temporárias no teste remoto.
 
 ## 6. E-mail
 
@@ -101,13 +104,13 @@ como enviada se o provedor devolver um identificador de mensagem. A fila
 persistente registra falhas para nova tentativa. SMTP continua disponível para
 ambientes compatíveis, mas não deve ser usado no Render Free.
 
-Não foi feito envio real porque `RESEND_API_KEY` e `EMAIL_FROM` não estão
-configurados. Ainda é necessário validar um domínio no Resend e fazer um envio
-controlado a um destinatário autorizado.
+No ambiente demonstrativo, `DEMO_MODE=true` e `EMAIL_PROVIDER=disabled`
+bloqueiam qualquer chamada externa. Resend permanece implementado para ativação
+futura, quando houver domínio validado e secrets próprios.
 
 ## 7. Render e frontend
 
-`render.yaml` usa plano `free`, `npm ci`, `npm start`, `/api/health`, PostgreSQL
+`render.yaml` usa plano `free`, `npm ci`, `npm run start:demo`, `/api/health`, PostgreSQL
 com SSL, pool máximo de cinco conexões, proxy confiável e rate limit local para
 uma única instância. O deploy automático está desligado até a revisão dos
 secrets, das contas demo e do CORS.
@@ -163,16 +166,14 @@ npm run dev
 
 ## 9. Pendências externas
 
-1. Escolher as duas senhas fictícias e executar `npm run demo:provision` com as
-   variáveis documentadas em `backend/.env.example`.
-2. Criar/autorizar o serviço pelo Blueprint do Render e cadastrar, sem commit:
-   `DATABASE_URL` do Session pooler Supabase, `JWT_SECRET`, `FRONTEND_URL`,
-   `RESEND_API_KEY` e `EMAIL_FROM`.
-3. Informar no frontend hospedado `VITE_API_URL=https://<api>.onrender.com` e
+1. Criar/autorizar o serviço pelo Blueprint do Render e cadastrar, sem commit:
+   `DATABASE_URL` do Session pooler Supabase, `JWT_SECRET` e `FRONTEND_URL`.
+2. Informar no frontend hospedado `VITE_API_URL=https://<api>.onrender.com` e
    usar a origem HTTPS exata do frontend em `FRONTEND_URL`.
-4. Validar o domínio do Resend e realizar um envio real controlado.
-5. Após o primeiro deploy manual, validar `/api/health`, CORS, login, agenda e
-   concorrência pela URL pública; só então habilitar deploy automático.
+3. Após o primeiro deploy manual, validar `/api/health`, CORS, acessos demo e
+   agenda pela URL pública; só então habilitar deploy automático.
+4. Futuramente, validar o domínio do Resend e realizar um envio real controlado
+   antes de reativar o cadastro público.
 
 Nenhuma credencial foi adicionada aos arquivos versionáveis e nenhum segredo foi
 impresso no relatório.

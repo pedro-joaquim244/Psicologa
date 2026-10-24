@@ -74,3 +74,28 @@ test('contas inativas continuam bloqueadas como credenciais inválidas', async (
   assert.equal((await post('/pacientes/login', { email: 'inativa@example.com', senha })).status, 401);
   assert.equal((await post('/auth/login', { email: 'admin-inativo@example.com', senha })).status, 401);
 });
+
+test('modo demo bloqueia reenvio de verificação por e-mail', async () => {
+  const names = ['DEMO_MODE', 'DEMO_PUBLIC_LOGIN', 'PUBLIC_REGISTRATION_ENABLED', 'EMAIL_PROVIDER'];
+  const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+  process.env.DEMO_MODE = 'true';
+  process.env.DEMO_PUBLIC_LOGIN = 'true';
+  process.env.PUBLIC_REGISTRATION_ENABLED = 'false';
+  process.env.EMAIL_PROVIDER = 'disabled';
+  try {
+    await connection.query(
+      `INSERT INTO usuarios_admin (nome, email, senha, tipo, ativo)
+       VALUES ('Sem Verificação', 'sem-verificacao@example.invalid', ?, 'psicologa', 1)`,
+      [await bcrypt.hash('SenhaSemEmail123!', 12)],
+    );
+
+    const resend = await post('/auth/reenviar-codigo', { email: 'sem-verificacao@example.invalid', senha: 'SenhaSemEmail123!' });
+    assert.equal(resend.status, 503);
+    assert.equal(messages.some((message) => message.email === 'sem-verificacao@example.invalid'), false);
+  } finally {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});
