@@ -1,13 +1,15 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useLocation } from 'react-router-dom';
-import { AUTH_EXPIRED_EVENT, loginAdmin, loginPatient, registerPatient, verifyEmail } from "../services/api";
+import { AUTH_EXPIRED_EVENT, getPublicConfig, loginAdmin, loginDemo, loginPatient, registerPatient, verifyEmail } from "../services/api";
 import { clearStoredSession, getStoredSession, saveStoredSession } from "../services/authStorage";
 
 const AuthContext = createContext(null);
 const readSessions = () => ({ paciente: getStoredSession('paciente'), profissional: getStoredSession('profissional') });
+const defaultPublicConfig = { demoMode: false, emailDelivery: true, publicRegistration: true, demoAccess: { paciente: false, profissional: false } };
 
 export function AuthProvider({ children }) {
   const [sessions, setSessions] = useState(readSessions);
+  const [publicConfig, setPublicConfig] = useState(defaultPublicConfig);
   const { pathname } = useLocation();
   const audience = pathname.startsWith('/adm') || (pathname === '/' && !sessions.paciente.token && sessions.profissional.token) ? 'profissional' : 'paciente';
   const session = sessions[audience];
@@ -22,14 +24,28 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    getPublicConfig({ signal: controller.signal }).then(setPublicConfig).catch(() => {});
+    return () => controller.abort();
+  }, []);
+
   const value = useMemo(() => ({
     ...session,
     isAuthenticated: Boolean(session.token),
     isProfessional: Boolean(session.token && ['psicologa', 'admin'].includes(session.user?.tipo)),
     isPatient: Boolean(session.token && session.user?.tipo === 'paciente'),
+    publicConfig,
     async login(credentials, audience = 'profissional') {
       const data = await (audience === 'paciente' ? loginPatient(credentials) : loginAdmin(credentials));
       if (!data?.token || !data?.usuario?.email_verificado) throw new Error('A API retornou uma sessão inválida.');
+      saveStoredSession(data.token, data.usuario);
+      setSessions(readSessions());
+      return data;
+    },
+    async loginDemoAccount(audience = 'paciente') {
+      const data = await loginDemo(audience);
+      if (!data?.token || !data?.usuario?.email_verificado) throw new Error('A API retornou uma sessão demonstrativa inválida.');
       saveStoredSession(data.token, data.usuario);
       setSessions(readSessions());
       return data;
@@ -49,7 +65,7 @@ export function AuthProvider({ children }) {
       clearStoredSession(audience);
       setSessions(readSessions());
     },
-  }), [session, audience]);
+  }), [session, audience, publicConfig]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

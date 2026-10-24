@@ -13,7 +13,7 @@ import '../../styles/scheduling.css';
 const emptyForm = { nome: '', telefone: '', email: '', modalidade: 'online' };
 
 export default function Scheduling() {
-  const { isPatient, isProfessional, token, user } = useAuth();
+  const { isPatient, isProfessional, token, user, publicConfig } = useAuth();
   const location = useLocation();
   const resumeBooking = useRef(location.state?.booking);
   const [date, setDate] = useState('');
@@ -168,9 +168,9 @@ export default function Scheduling() {
             </div>}
             {!isPatient && !receipt && <div className="booking-login-gate">
               <h3>{isProfessional ? 'Agendamento para pacientes' : 'Entre para reservar sua consulta'}</h3>
-              <p>{isProfessional ? 'Para reservar, use uma conta de paciente. Sua agenda profissional está disponível no menu.' : 'Escolha seu horário e entre na sua conta. Se for sua primeira vez, crie seu cadastro.'}</p>
+              <p>{isProfessional ? 'Para reservar, use uma conta de paciente. Sua agenda profissional está disponível no menu.' : publicConfig.demoMode ? 'Escolha seu horário e use o acesso fictício de demonstração para reservar.' : 'Escolha seu horário e entre na sua conta. Se for sua primeira vez, crie seu cadastro.'}</p>
               <Link className="button button-dark" to="/login" state={{ booking: { date, horario: slot?.horario } }}>Entrar como paciente</Link>
-              <Link className="text-link" to="/cadastro" state={{ booking: { date, horario: slot?.horario } }}>Criar conta</Link>
+              {publicConfig.publicRegistration && <Link className="text-link" to="/cadastro" state={{ booking: { date, horario: slot?.horario } }}>Criar conta</Link>}
             </div>}
             {date && slot && isPatient && <BookingForm date={date} slot={slot} values={values} errors={errors} submitting={submitting} onSubmit={submit} onChange={(key, value) => { setValues((current) => ({ ...current, [key]: value })); setErrors((current) => ({ ...current, [key]: undefined })); }} />}
           </div>

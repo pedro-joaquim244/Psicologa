@@ -11,7 +11,7 @@ import "../../styles/login.css";
 
 export default function LoginAdmin({ audience = 'profissional', registering = false }) {
   const pageRef = useRef(null);
-  const { isProfessional, isPatient, login, register, confirmEmail } = useAuth();
+  const { isProfessional, isPatient, login, loginDemoAccount, register, confirmEmail, publicConfig } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const patient = audience === 'paciente';
@@ -32,6 +32,7 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
   const expired = challenge && time >= challenge.expiraEm;
   const patientReturn = ['/minhas-consultas', '/minha-conta'].includes(location.state?.from) ? location.state.from : '/#agendamento';
   const destination = patient ? patientReturn : '/adm/agenda';
+  const registrationUnavailable = registering && !publicConfig.publicRegistration;
 
   useLayoutEffect(() => {
     const viewport = window.visualViewport;
@@ -71,6 +72,10 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
     if (submitting) return;
     setError("");
     setUnverifiedCredentials(null);
+    if (registrationUnavailable) {
+      setError('Novos cadastros estão desativados nesta demonstração. Use o acesso demonstrativo abaixo.');
+      return;
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Informe um e-mail válido.'); return; }
     if (registering && (name.trim().length < 3 || !/^\d{10,13}$/.test(phone.replace(/\D/g, '')))) { setError('Informe seu nome completo e WhatsApp com DDD.'); return; }
     if (registering && (password.length < 8 || new TextEncoder().encode(password).length > 72)) {
@@ -104,6 +109,19 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
       } else {
         setError(requestError.status === 401 ? "E-mail ou senha não conferem. Revise os dados e tente novamente." : requestError.message || "Não foi possível entrar agora.");
       }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    if (submitting) return;
+    setError(''); setNotice(''); setSubmitting(true);
+    try {
+      await loginDemoAccount(audience);
+      navigate(destination, { replace: true, state: location.state });
+    } catch (requestError) {
+      setError(requestError.message || 'Não foi possível iniciar a demonstração.');
     } finally {
       setSubmitting(false);
     }
@@ -163,7 +181,7 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
           <div className="login-heading">
             <FloralMark /><p className="admin-kicker">{patient ? 'ÁREA DO PACIENTE' : 'ÁREA ADMINISTRATIVA'}</p>
             <h1 id="login-title">{challenge ? <>Confirme seu <em>e-mail.</em></> : registering ? <>Crie sua <em>conta.</em></> : patient ? <>Seu próximo <em>passo.</em></> : <>Bem-vinda <em>de volta.</em></>}</h1>
-            <p>{challenge ? <>Código enviado para <strong className="verification-email">{challenge.email}</strong>. Válido por 10 minutos.</> : registering ? 'Preencha seus dados para agendar. Confirmaremos seu e-mail por código.' : patient ? 'Entre com seu e-mail e senha para acessar sua conta.' : 'Acesse sua agenda com seu e-mail e senha.'}</p>
+            <p>{challenge ? <>Código enviado para <strong className="verification-email">{challenge.email}</strong>. Válido por 10 minutos.</> : registrationUnavailable ? 'O cadastro público está pausado. Entre diretamente na conta fictícia de demonstração.' : registering ? 'Preencha seus dados para agendar. Confirmaremos seu e-mail por código.' : patient ? 'Entre com seu e-mail e senha para acessar sua conta.' : 'Acesse sua agenda com seu e-mail e senha.'}</p>
           </div>
           {challenge ? <form className="login-form" onSubmit={handleVerify} noValidate>
             {error && <div className="login-error" role="alert"><span>{error}</span></div>}
@@ -179,6 +197,7 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
           </form> : <>
           <form className="login-form" onSubmit={handleSubmit} noValidate>
             {error && <div className="login-error" role="alert"><i className="bi bi-exclamation-circle" aria-hidden="true" /><span>{error}</span></div>}
+            {publicConfig.demoAccess?.[audience] && <button className="admin-button login-submit" type="button" onClick={handleDemoLogin} disabled={submitting}><span>{submitting ? 'Preparando demonstração…' : `Entrar como ${patient ? 'paciente' : 'profissional'} demo`}</span><i className="bi bi-play-circle" aria-hidden="true" /></button>}
             {unverifiedCredentials && <button className="verification-link" type="button" onClick={handleStartVerification} disabled={submitting}>Reenviar código</button>}
             {registering && <>
               <label className="admin-field"><span>Nome completo</span><span className="field-control"><input type="text" name="nome" autoComplete="name" required minLength={3} maxLength={150} value={name} onChange={(event) => setName(event.target.value)} disabled={submitting} /></span></label>
@@ -187,9 +206,9 @@ export default function LoginAdmin({ audience = 'profissional', registering = fa
             <label className="admin-field"><span>E-mail</span><span className="field-control"><i className="bi bi-envelope" aria-hidden="true" /><input type="email" name="email" value={email} onChange={(event) => { setEmail(event.target.value); setUnverifiedCredentials(null); }} autoComplete="username" inputMode="email" required maxLength={255} placeholder="seu@email.com" disabled={submitting} /></span></label>
             <div className="admin-field"><div className="password-label"><label htmlFor="admin-password">Senha</label>{registering && <span id="password-requirement">8+ caracteres</span>}</div><span className="field-control"><i className="bi bi-lock" aria-hidden="true" /><input id="admin-password" aria-describedby={registering ? "password-requirement" : undefined} type={showPassword ? "text" : "password"} name="senha" value={password} onChange={(event) => { setPassword(event.target.value); setUnverifiedCredentials(null); }} autoComplete={registering ? 'new-password' : 'current-password'} required placeholder={registering ? 'Crie sua senha' : 'Digite sua senha'} disabled={submitting} /><button type="button" className="password-toggle" onClick={() => setShowPassword((current) => !current)} aria-pressed={showPassword} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}><i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} aria-hidden="true" /></button></span></div>
             {registering && <div className="admin-field"><div className="password-label"><label htmlFor="admin-confirm-password">Confirmar senha</label></div><span className="field-control"><i className="bi bi-shield-check" aria-hidden="true" /><input id="admin-confirm-password" type={showPassword ? "text" : "password"} name="confirmar_senha" value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); setUnverifiedCredentials(null); }} autoComplete="new-password" required placeholder="Repita sua senha" disabled={submitting} /></span></div>}
-            <button className="admin-button login-submit" type="submit" disabled={submitting || !email.trim() || !password}><span>{submitting ? (registering ? 'Criando conta…' : 'Entrando…') : registering ? 'Criar conta' : 'Entrar'}</span><i className="bi bi-arrow-up-right" aria-hidden="true" /></button>
+            <button className="admin-button login-submit" type="submit" disabled={submitting || registrationUnavailable || !email.trim() || !password}><span>{submitting ? (registering ? 'Criando conta…' : 'Entrando…') : registering ? 'Criar conta' : 'Entrar'}</span><i className="bi bi-arrow-up-right" aria-hidden="true" /></button>
           </form>
-          {patient && <p className="login-switch">{registering ? 'Já tem uma conta?' : 'É sua primeira consulta?'} <Link to={registering ? '/login' : '/cadastro'} state={location.state}>{registering ? 'Entrar' : 'Criar conta'}</Link></p>}
+          {patient && (registering || publicConfig.publicRegistration) && <p className="login-switch">{registering ? 'Já tem uma conta?' : 'É sua primeira consulta?'} <Link to={registering ? '/login' : '/cadastro'} state={location.state}>{registering ? 'Entrar' : 'Criar conta'}</Link></p>}
           </>}
         </div>
         <p className="login-footer">Acesso reservado · Seus dados de login não são compartilhados.</p>

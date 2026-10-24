@@ -63,6 +63,15 @@ export function loginAdmin(credentials, options = {}) {
   return apiRequest("/api/auth/login", { method: "POST", body: credentials, ...options });
 }
 
+export function getPublicConfig(options = {}) {
+  return apiRequest('/api/config', { method: 'GET', ...options });
+}
+
+export function loginDemo(audience, options = {}) {
+  const profile = audience === 'paciente' ? 'paciente' : 'profissional';
+  return apiRequest(`/api/demo/${profile}`, { method: 'POST', ...options });
+}
+
 export async function listAppointments(token, options = {}) {
   const data = await apiRequest("/api/agendamentos", { method: "GET", token, ...options });
   const appointments = Array.isArray(data) ? data : data?.agendamentos;
