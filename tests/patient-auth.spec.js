@@ -2,6 +2,10 @@ import { test, expect } from '@playwright/test';
 
 const patient = { id: 2, nome: 'Paciente Teste', telefone: '16999998888', email: 'paciente@example.com', tipo: 'paciente' };
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/config', route => route.fulfill({ json: { demoMode: false, emailDelivery: true, publicRegistration: true, demoAccess: { paciente: false, profissional: false } } }));
+});
+
 test('login visível oferece os dois perfis e cadastro', async ({ page }, testInfo) => {
   await page.goto('/');
   if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Abrir menu' }).click();

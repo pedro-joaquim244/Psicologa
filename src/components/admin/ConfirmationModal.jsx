@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { lockPageScroll, unlockPageScroll } from '../../lib/pageScrollLock';
 
 export default function ConfirmationModal({ appointment, busy, onClose, onConfirm, title, description, confirmLabel = 'Cancelar agendamento', busyLabel = 'Cancelando…', kicker = 'ALTERAR AGENDAMENTO', error }) {
   const dialogRef = useRef(null);
@@ -11,7 +12,7 @@ export default function ConfirmationModal({ appointment, busy, onClose, onConfir
   useEffect(() => {
     if (!appointment) return undefined;
     lastActiveRef.current = document.activeElement;
-    backButtonRef.current?.focus();
+    backButtonRef.current?.focus({ preventScroll: true });
     const dialog = dialogRef.current;
     const onKeyDown = (event) => {
       if (event.key === "Escape" && !busyRef.current) onClose();
@@ -24,11 +25,11 @@ export default function ConfirmationModal({ appointment, busy, onClose, onConfir
       else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog || !dialog.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
     };
     document.addEventListener("keydown", onKeyDown);
-    document.body.classList.add("modal-open");
+    lockPageScroll();
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      document.body.classList.remove("modal-open");
-      lastActiveRef.current?.focus?.();
+      unlockPageScroll();
+      lastActiveRef.current?.focus?.({ preventScroll: true });
     };
   }, [appointment, onClose]);
 

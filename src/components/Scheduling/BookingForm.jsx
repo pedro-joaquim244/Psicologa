@@ -1,4 +1,5 @@
 import { bookingDateLabel } from '../../utils/scheduling';
+import { Link } from 'react-router-dom';
 
 export default function BookingForm({ date, slot, values, onChange, errors, submitting, onSubmit }) {
   const fields = [
@@ -28,7 +29,7 @@ export default function BookingForm({ date, slot, values, onChange, errors, subm
         <p>{slot.horario} — {slot.fim} <span>·</span> {values.modalidade === 'online' ? 'Online' : 'Presencial'}</p>
       </div>
       <button className="button button-dark booking-submit" type="submit" disabled={submitting}>{submitting ? 'Reservando seu horário…' : 'Confirmar agendamento'}<i className="bi bi-arrow-up-right" aria-hidden="true" /></button>
-      <p className="booking-privacy">Seus dados serão usados para organizar este atendimento e entrar em contato com você.</p>
+      <p className="booking-privacy">Seus dados serão usados para organizar este atendimento e entrar em contato com você. Ao confirmar, você declara ter lido o <Link to="/privacidade">aviso de privacidade</Link>.</p>
     </form>
   );
 }

@@ -28,11 +28,16 @@ function respondError(res, error) {
   return res.status(500).json({ erro: 'Não foi possível atualizar os horários agora.' });
 }
 
-function batchMessage(result, noun, verb) {
-  const created = Number(result.criados || 0);
+function batchMessage(result, noun, verb, countField = 'criados') {
+  const created = Number(result[countField] || 0);
   const ignored = Number(result.ignorados || 0);
   const primary = `${created} ${noun}${created === 1 ? '' : 's'} ${verb}${created === 1 ? '' : 's'}.`;
-  return ignored ? `${primary} ${ignored} duplicado${ignored === 1 ? '' : 's'} ignorado${ignored === 1 ? '' : 's'}.` : primary;
+  const duplicated = ignored ? ` ${ignored} duplicado${ignored === 1 ? '' : 's'} ignorado${ignored === 1 ? '' : 's'}.` : '';
+  const protectedCount = Number(result.preservados || 0);
+  const protectedMessage = protectedCount
+    ? ` ${protectedCount} ${noun}${protectedCount === 1 ? '' : 's'} preservado${protectedCount === 1 ? '' : 's'} por possuir consulta ativa.`
+    : '';
+  return `${primary}${duplicated}${protectedMessage}`;
 }
 
 async function mutate(req, res, action) {
@@ -117,7 +122,9 @@ router.post('/disponibilidades/copiar', (req, res) => mutate(req, res, async (co
 router.post('/disponibilidades/acoes', (req, res) => mutate(req, res, async (connection, id) => {
   const result = await applySlotAction(connection, id, req.body || {});
   const verb = req.body?.acao === 'remover' ? 'removido' : req.body?.acao === 'bloquear' ? 'bloqueado' : 'atualizado';
-  return { body: { ...result, mensagem: batchMessage(result, 'horário', verb) } };
+  const countField = req.body?.acao === 'remover' ? 'removidos'
+    : req.body?.acao === 'duracao' ? 'alterados' : 'criados';
+  return { body: { ...result, mensagem: batchMessage(result, 'horário', verb, countField) } };
 }));
 
 router.post('/bloqueios/lote', (req, res) => mutate(req, res, async (connection, id) => {

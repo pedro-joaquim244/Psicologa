@@ -1,10 +1,11 @@
 import { useRef } from 'react';
-import { images, site } from '../../config/site';
+import { images } from '../../config/site';
 import { gsap, useScrollScene } from '../../lib/motion';
 import ArrowLink from '../Shared/ArrowLink';
 import CircularBadge from '../Shared/CircularBadge';
 import Photo from '../Shared/Photo';
 import FloralMark from '../Shared/FloralMark';
+import SectionLink from '../Shared/SectionLink';
 import '../../styles/hero.css';
 
 function animateHero({ desktop, reduced }, root) {
@@ -15,12 +16,12 @@ function animateHero({ desktop, reduced }, root) {
   }
   const photo = root.querySelector('.hero-photo');
   const timeline = gsap.timeline({ scrollTrigger: {
-    id: 'hero-expand', trigger: root, start: 'top top', end: () => `+=${window.innerHeight * 1.45}`,
+    id: 'hero-expand', trigger: root, start: 'top top', end: () => `+=${window.innerHeight * .82}`,
     scrub: 1, pin: true, anticipatePin: 1, invalidateOnRefresh: true,
   } });
   // Medidas sem transformações mantêm o cálculo estável ao redimensionar.
-  timeline.to('.hero-copy', { y: -75, autoAlpha: 0, duration: 0.45, ease: 'none' }, 0)
-    .to('.hero-meta, .photo-note, .hero-side-note, .hero-badge', { autoAlpha: 0, duration: 0.3 }, 0)
+  timeline.to('.hero-copy', { y: -32, autoAlpha: 0.32, duration: 0.45, ease: 'none' }, 0)
+    .to('.hero-meta, .photo-note, .hero-side-note, .hero-badge', { autoAlpha: 0.25, duration: 0.3 }, 0)
     .to(photo, {
       x: () => -photo.offsetLeft,
       y: () => -photo.offsetTop,
@@ -31,7 +32,7 @@ function animateHero({ desktop, reduced }, root) {
     }, 0.08)
     .fromTo('.hero-photo img', { scale: 1.025 }, { scale: 1, duration: 1, ease: 'none' }, 0.08)
     .fromTo('.hero-photo-shade', { opacity: 0 }, { opacity: 0.3, duration: 0.5 }, 0.65)
-    .fromTo('.hero-photo-message', { opacity: 0, y: 25 }, { opacity: 1, y: 0, duration: 0.3 }, 1.08);
+    .fromTo('.hero-photo-message', { opacity: 0, y: 25 }, { opacity: .72, y: 0, duration: 0.3 }, .62);
 }
 
 export default function Hero() {
@@ -43,7 +44,8 @@ export default function Hero() {
         <p className="eyebrow hero-eyebrow"><FloralMark /> PSICOLOGIA · ACOLHIMENTO · AUTOCONHECIMENTO</p>
         <h1 id="hero-title">Um espaço para<br />se escutar com<br /><em>mais calma.</em></h1>
         <p className="hero-description">A psicoterapia pode ser um espaço de pausa, compreensão e construção de novas possibilidades para sua vida.</p>
-        <div className="hero-actions"><ArrowLink className="button button-dark">Agendar uma conversa</ArrowLink><a className="text-link" href="#sobre">Conheça meu trabalho <i className="bi bi-arrow-down" aria-hidden="true" /></a></div>
+        <div className="hero-actions"><ArrowLink className="button button-dark">Agendar uma conversa</ArrowLink><SectionLink className="text-link" section="sobre">Conheça meu trabalho <i className="bi bi-arrow-down" aria-hidden="true" /></SectionLink></div>
+        <ul className="hero-trust-list" aria-label="Informações do atendimento"><li><i className="bi bi-camera-video" aria-hidden="true" /> Online e presencial</li><li><i className="bi bi-calendar-check" aria-hidden="true" /> Agendamento pelo site</li></ul>
       </div>
       <figure className="hero-photo">
         <Photo image={images.hero} loading="eager" fetchPriority="high" sizes="100vw" />
@@ -53,7 +55,7 @@ export default function Hero() {
       <span className="photo-note">Um lugar de pausa. Um encontro com você.</span>
       <span className="hero-side-note" aria-hidden="true">PRESENÇA. ESCUTA. CUIDADO.</span>
       <div className="hero-photo-message" aria-hidden="true"><span className="eyebrow">SEU TEMPO. SEU ESPAÇO.</span><p>Você pode<br /><em>simplesmente ser.</em></p></div>
-      <div className="hero-meta"><span>{site.crp} <span className="meta-divider">/</span> PRESENCIAL & ONLINE</span><a href="#processo">DESACELERE. CONTINUE A DESCOBRIR. <span className="scroll-circle"><i className="bi bi-arrow-down" aria-hidden="true" /></span></a><span className="hero-index">01 — 12</span></div>
+      <div className="hero-meta"><span>ATENDIMENTO PRESENCIAL & ONLINE</span><SectionLink section="processo">DESACELERE. CONTINUE A DESCOBRIR. <span className="scroll-circle"><i className="bi bi-arrow-down" aria-hidden="true" /></span></SectionLink><span className="hero-index">01 — 12</span></div>
     </section>
   );
 }

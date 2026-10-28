@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const day = '2030-09-18';
-const professional = { id: 7, nome: 'Helena Martins', email: 'helena@example.com', tipo: 'psicologa', email_verificado: true };
+const professional = { id: 7, nome: 'Mauricéia Soares', email: 'profissional@example.com', tipo: 'psicologa', email_verificado: true };
 const patient = { id: 2, nome: 'Paciente Teste', email: 'paciente@example.com', tipo: 'paciente', email_verificado: true };
 const appointments = [
   { id: 1, nome_cliente: 'Marina Oliveira', inicio: `${day} 15:00:00`, fim: `${day} 15:50:00`, modalidade: 'online', status: 'agendado' },
@@ -9,6 +9,10 @@ const appointments = [
   { id: 3, nome_cliente: 'Carla Souza', inicio: `${day} 13:00:00`, fim: `${day} 13:50:00`, modalidade: 'online', status: 'concluido' },
   { id: 4, nome_cliente: 'Daniela Lima', inicio: `${day} 07:00:00`, fim: `${day} 07:50:00`, modalidade: 'presencial', status: 'cancelado' },
 ];
+
+test.beforeEach(async ({}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Os fluxos funcionais rodam uma vez; a matriz responsiva é validada no projeto desktop.');
+});
 
 async function seedSession(page, { admin = true, withPatient = false } = {}) {
   await page.clock.setFixedTime(new Date('2030-09-10T12:00:00'));
@@ -43,6 +47,7 @@ async function mockAgenda(page) {
     const url = new URL(request.url());
     const method = request.method();
     const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (url.pathname === '/api/config') return json({ demoMode: false, emailDelivery: true, publicRegistration: true, demoAccess: { paciente: false, profissional: false } });
     if (url.pathname === '/api/agendamentos' && method === 'GET') return json(appointments);
     if (url.pathname === '/api/agenda' && method === 'GET') {
       if (state.unauthorized) return json({ erro: 'Sessão expirada.' }, 401);
@@ -113,7 +118,7 @@ async function mockAgenda(page) {
 
 async function openDay(page) {
   await page.goto('/adm/agenda');
-  await page.getByRole('button', { name: 'Horários do dia', exact: true }).click();
+  await page.getByRole('button', { name: 'Agenda', exact: true }).click();
   await page.getByLabel('Dia da agenda', { exact: true }).fill(day);
   await expect(page.getByLabel('Dia da agenda', { exact: true })).toHaveValue(day);
   await expect(page.locator('.schedule-timeline time').filter({ hasText: '08:00' }).first()).toBeVisible();
@@ -204,7 +209,7 @@ test('administra um período semanal com duração e intervalo próprios', async
   await seedSession(page);
   const state = await mockAgenda(page);
   await page.goto('/adm/agenda');
-  await page.getByRole('button', { name: 'Rotina semanal', exact: true }).click();
+  await page.getByRole('button', { name: 'Disponibilidade', exact: true }).click();
   await page.getByRole('button', { name: 'Adicionar período', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('heading', { name: 'Novo período semanal', exact: true })).toBeVisible();
@@ -242,7 +247,7 @@ test('pré-visualiza e cria 20 horários em cinco dias com um único envio em lo
   await seedSession(page);
   const state = await mockAgenda(page);
   await page.goto('/adm/agenda');
-  await page.getByRole('button', { name: 'Rotina semanal', exact: true }).click();
+  await page.getByRole('button', { name: 'Disponibilidade', exact: true }).click();
   await page.getByRole('button', { name: 'Adicionar horários', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('Dias da semana', { exact: true })).toBeVisible();
@@ -323,7 +328,7 @@ test('views e formulários cabem em celular, tablet e notebook', async ({ page }
   await openDay(page);
   for (const [width, height] of [[320, 740], [390, 844], [768, 1024], [1280, 720]]) {
     await page.setViewportSize({ width, height });
-    for (const view of ['Atendimentos', 'Horários do dia', 'Rotina semanal']) {
+    for (const view of ['Lista', 'Dia', 'Semana']) {
       await page.getByRole('button', { name: view, exact: true }).click();
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     }

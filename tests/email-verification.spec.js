@@ -2,6 +2,10 @@ import { test, expect } from '@playwright/test';
 
 const patient = { id: 1, nome: 'Paciente', tipo: 'paciente', email: 'paciente@example.com', telefone: '16999998888', email_verificado: true };
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/config', route => route.fulfill({ json: { demoMode: false, emailDelivery: true, publicRegistration: true, demoAccess: { paciente: false, profissional: false } } }));
+});
+
 test('confirma no cadastro uma vez e o login futuro entra direto sem novo código', async ({ page }, testInfo) => {
   await page.clock.install();
   let generation = 'a';

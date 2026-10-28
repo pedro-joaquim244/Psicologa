@@ -12,7 +12,7 @@ const titles = {
 
 const descriptions = {
   copiar: 'Os horários da origem serão copiados para os dias escolhidos. Horários já existentes serão preservados.',
-  remover: 'As consultas já marcadas são preservadas. A operação será recusada se um horário necessário para uma consulta deixar de existir.',
+  remover: 'Horários livres serão removidos. Se algum deles possuir consulta ativa, ele será preservado e identificado no resultado.',
   duracao: 'A nova duração precisa caber no mesmo dia e não pode alterar consultas existentes.',
   bloquear: 'O bloqueio impede novos agendamentos. Consultas já existentes nunca são canceladas automaticamente.',
   duplicar: 'Crie cópias dos horários selecionados em outros dias da semana. Duplicatas serão ignoradas.',

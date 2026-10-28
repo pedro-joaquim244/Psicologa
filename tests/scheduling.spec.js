@@ -3,14 +3,14 @@ import { test, expect } from '@playwright/test';
 const api = '**/api';
 const selectedDate = '2030-09-18';
 const slots = [{ horario: '09:00', fim: '09:50' }, { horario: '15:00', fim: '15:50' }];
-const user = { id: 1, nome: 'Dra. Helena Martins', tipo: 'psicologa' };
+const user = { id: 1, nome: 'Mauricéia Soares', tipo: 'psicologa' };
 const patient = { id: 7, nome: 'Teste Integração', telefone: '16999998888', email: 'teste@example.com', tipo: 'paciente' };
 
 async function setup(page, { conflict = false, availabilityError = false, authenticated = true } = {}) {
   await page.clock.setFixedTime(new Date('2030-09-10T12:00:00'));
   if (authenticated) await page.addInitScript((user) => {
-    localStorage.setItem('psicologa_token', 'patient-jwt');
-    localStorage.setItem('psicologa_usuario', JSON.stringify(user));
+    localStorage.setItem('paciente_token', 'patient-jwt');
+    localStorage.setItem('paciente_usuario', JSON.stringify(user));
   }, patient);
   let record;
   let booked = false;
@@ -21,6 +21,7 @@ async function setup(page, { conflict = false, availabilityError = false, authen
     const url = new URL(req.url());
     requests.push({ method: req.method(), path: url.pathname, authorization: req.headers().authorization });
     const json = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
+    if (url.pathname === '/api/config') return json({ demoMode: false, emailDelivery: true, publicRegistration: true, demoAccess: { paciente: false, profissional: false } });
     if (url.pathname === '/api/horarios') {
       gets++;
       if (availabilityError && gets === 1) return json({ erro: 'Disponibilidade temporariamente indisponível.' }, 503);
@@ -99,7 +100,7 @@ test('paciente cria conta, reserva e psicóloga confirma no painel', async ({ pa
   await expect(appointment.getByText('Confirmado', { exact: true })).toBeVisible();
   await appointment.getByRole('button', { name: 'Concluir', exact: true }).click();
   await expect(appointment.getByText('Concluído', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Sair', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Ações da conta' }).getByRole('button', { name: 'Sair', exact: true }).click();
   await expect(page).toHaveURL(/\/adm\/login$/);
   expect(await page.evaluate(() => localStorage.getItem('psicologa_token'))).toBeNull();
   await page.goto('/adm/agenda');
@@ -180,7 +181,7 @@ test('presencial e erro de envio com nova tentativa', async ({ page }) => {
   await selectAndFill(page);
   await page.getByRole('radio', { name: 'Presencial', exact: true }).first().check();
   await page.getByRole('button', { name: 'Confirmar agendamento', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Não foi possível realizar a reserva.');
+  await expect(page.getByRole('alert')).toContainText('Não foi possível confirmar a reserva agora.');
   await expect(page.getByLabel('Nome completo')).toHaveValue('Teste Integração');
   await page.getByRole('button', { name: 'Confirmar agendamento', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Agendamento realizado', exact: true })).toBeVisible();

@@ -163,7 +163,51 @@
 }
 
 .field-control select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
   cursor: pointer;
+}
+
+.field-control:has(select) {
+  position: relative;
+}
+
+.field-control:has(select)::after {
+  content: '';
+  position: absolute;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  pointer-events: none;
+  transform: translateY(-3px) rotate(45deg);
+}
+
+.field-control select option,
+.field-control select optgroup {
+  background-color: var(--paper);
+  color: var(--ink);
+}
+
+.field-control select option:disabled {
+  color: var(--muted);
+}
+
+.field-control select option:checked {
+  background: var(--paper-dark) linear-gradient(0deg, var(--paper-dark), var(--paper-dark));
+  color: var(--ink);
+}
+
+.field-control:has(select):focus-within {
+  outline-width: 1px;
+  outline-offset: 0;
+  border-bottom-color: transparent;
+}
+
+:root[data-theme='dark'] .field-control select {
+  color-scheme: dark;
 }
 
 /* Login */
@@ -188,7 +232,7 @@
 .login-visual-shade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgb(18 34 23 / 12%), rgb(18 34 23 / 62%));
+  background: linear-gradient(180deg, var(--color-image-shade-soft), var(--color-image-shade));
 }
 
 .login-visual-copy {
@@ -197,7 +241,7 @@
   right: clamp(30px, 5vw, 75px);
   bottom: clamp(45px, 7vw, 90px);
   left: clamp(30px, 5vw, 75px);
-  color: var(--paper);
+  color: var(--color-on-dark);
 }
 
 .login-visual-copy p {
@@ -214,7 +258,7 @@
   z-index: 1;
   top: clamp(30px, 5vw, 70px);
   left: clamp(30px, 5vw, 70px);
-  color: var(--paper);
+  color: var(--color-on-dark);
 }
 
 .login-panel {
@@ -229,6 +273,13 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-lg);
+}
+
+.login-top-actions,
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
 }
 
 .back-to-site {
@@ -327,7 +378,7 @@
   padding: var(--space-sm);
   border-left: 2px solid var(--color-floral);
   background: color-mix(in srgb, var(--color-floral) 9%, transparent);
-  color: #744653;
+  color: var(--color-danger);
   font-size: var(--fs-small);
 }
 
@@ -359,6 +410,10 @@
   justify-content: space-between;
   min-height: 94px;
   gap: var(--space-lg);
+}
+
+.admin-header-actions .theme-toggle {
+  border: var(--border-rule);
 }
 
 .admin-header nav {
@@ -590,8 +645,8 @@
 
 .status-agendado { color: var(--color-sage-ink); }
 .status-confirmado { color: var(--forest); }
-.status-concluido { color: #556c72; }
-.status-cancelado { color: #86515d; }
+.status-concluido { color: var(--color-info); }
+.status-cancelado { color: var(--color-danger); }
 
 .modality-label {
   display: inline-flex;
@@ -665,7 +720,7 @@
 
 .cancel-action {
   margin-left: auto;
-  color: #86515d;
+  color: var(--color-danger);
 }
 
 .cancel-action:hover,
@@ -754,7 +809,7 @@
   display: grid;
   padding: 20px;
   overflow-y: auto;
-  background: rgb(16 27 21 / 62%);
+  background: var(--color-backdrop);
   backdrop-filter: blur(7px);
   place-items: center;
   animation: backdrop-in 220ms ease-out;
@@ -827,7 +882,7 @@
 }
 
 .admin-toast.is-error {
-  background: #744653;
+  background: var(--color-danger);
   border-left-color: var(--color-floral);
 }
 
@@ -869,6 +924,7 @@
 }
 
 @media (max-width: 650px) {
+  .login-top-actions, .admin-header-actions { gap: var(--space-xs); }
   .admin-container { width: calc(100% - 40px); }
   .admin-brand-copy strong { font-size: 1.2rem; }
   .admin-header .admin-container { min-height: 82px; }
@@ -937,7 +993,7 @@
 .field-control:focus-within { outline: 2px solid var(--forest); outline-offset: 3px; }
 .field-control input, .field-control select { font-size: max(16px, var(--fs-body)); }
 .status-tabs button { min-height: 44px; }
-.danger-button { background: #86515d; border-color: #86515d; }
+.danger-button { background: var(--color-danger); border-color: var(--color-danger); }
 .admin-toast button { width: 44px; height: 44px; }
 @media (max-width: 650px) {
   .admin-header .admin-container { flex-wrap: wrap; gap: 8px 16px; padding-block: 12px; }
@@ -948,4 +1004,128 @@
   .agenda-hero h1 { font-size: clamp(2.75rem, 12vw, 4.5rem); }
   .modal-actions { grid-template-columns: minmax(0, 1fr); }
   .modal-actions button { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 420px) {
+  .admin-brand.is-compact .admin-brand-copy { display: none; }
+  .admin-header-actions .theme-toggle { width: 40px; height: 40px; flex-basis: 40px; }
+}
+
+/* Painel administrativo: mesma paleta editorial do site, com leitura de agenda mais direta. */
+.admin-page.agenda-page {
+  background:
+    radial-gradient(circle at 88% 7%, color-mix(in srgb, var(--color-blue) 34%, transparent), transparent 24rem),
+    var(--paper);
+}
+
+.admin-header {
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--forest) 8%, transparent);
+}
+
+.agenda-workspace {
+  display: grid;
+  grid-template-columns: 218px minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(32px, 4vw, 64px);
+  max-width: 1560px;
+}
+
+.admin-sidebar {
+  position: sticky;
+  top: 118px;
+  display: flex;
+  min-height: min(650px, calc(100svh - 150px));
+  flex-direction: column;
+  padding: 20px 12px 14px;
+  border: var(--border-rule);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  box-shadow: 0 18px 50px color-mix(in srgb, var(--color-shadow) 48%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.admin-sidebar-label {
+  padding: 0 12px 12px;
+  color: var(--muted);
+  font-size: .625rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.admin-sidebar-nav { display: grid; gap: 4px; }
+.admin-sidebar-nav button,
+.admin-sidebar-logout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: .8125rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-hover), color var(--duration-hover), transform var(--duration-hover);
+}
+
+.admin-sidebar-nav button i,
+.admin-sidebar-logout i { width: 16px; font-size: 1rem; text-align: center; }
+.admin-sidebar-nav button:hover,
+.admin-sidebar-nav button:focus-visible { color: var(--forest); background: color-mix(in srgb, var(--paper-dark) 78%, transparent); }
+.admin-sidebar-nav button.is-active { color: var(--paper); background: var(--forest); box-shadow: 0 8px 18px color-mix(in srgb, var(--forest) 18%, transparent); }
+.admin-sidebar-footer { display: grid; gap: 12px; margin-top: auto; padding-top: 18px; border-top: var(--border-rule); }
+.admin-profile { display: flex; align-items: center; gap: 10px; padding-inline: 4px; min-width: 0; }
+.admin-profile-mark { display: grid; width: 34px; height: 34px; flex: 0 0 34px; border-radius: 50%; background: var(--color-floral); color: var(--paper); font-family: var(--serif); font-size: 1.25rem; place-items: center; }
+.admin-profile strong, .admin-profile small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-profile strong { font-size: .75rem; font-weight: 700; }
+.admin-profile small { margin-top: 1px; color: var(--muted); font-size: .625rem; }
+.admin-sidebar-logout { color: var(--color-danger); }
+.admin-sidebar-logout:hover, .admin-sidebar-logout:focus-visible { background: color-mix(in srgb, var(--color-floral) 10%, transparent); }
+
+.agenda-content { min-width: 0; padding-block: clamp(44px, 5vw, 76px) clamp(64px, 8vw, 110px); }
+.agenda-hero { padding-bottom: clamp(30px, 4vw, 50px); }
+.agenda-hero h1 { font-size: clamp(2.8rem, 4.4vw, 5rem); }
+.agenda-page-title { margin-top: 18px !important; color: var(--forest) !important; font-family: var(--serif); font-size: clamp(1.6rem, 2.4vw, 2.25rem) !important; line-height: 1.05; }
+.agenda-page-title + p { margin-top: 8px !important; max-width: 420px; font-size: .875rem !important; }
+.agenda-date { align-self: center; padding: 13px 16px; border: var(--border-rule); border-radius: 999px; background: color-mix(in srgb, var(--paper) 75%, transparent); font-size: .875rem; }
+
+.agenda-summary { gap: 12px; border: 0; }
+.agenda-summary > div,
+.agenda-summary > div:first-child { min-height: 142px; padding: 20px; border: var(--border-rule); border-radius: 14px; background: color-mix(in srgb, var(--paper) 85%, transparent); box-shadow: 0 12px 30px color-mix(in srgb, var(--color-shadow) 35%, transparent); }
+.agenda-summary > div:nth-child(2) { background: color-mix(in srgb, var(--color-blue) 23%, var(--paper)); }
+.agenda-summary > div:nth-child(3) { background: color-mix(in srgb, var(--color-floral) 10%, var(--paper)); }
+.agenda-summary strong { font-size: clamp(3.5rem, 5.2vw, 5.5rem); }
+
+.agenda-filters { margin-top: 32px; padding: 24px; border: var(--border-rule); border-radius: 16px; background: color-mix(in srgb, var(--paper) 88%, transparent); }
+.status-tabs { margin-top: 16px; }
+.status-tabs button { border-radius: 999px; }
+.filter-fields { margin-top: 20px; }
+.appointments-section { margin-top: 10px; }
+.appointment-item { margin-top: 12px; padding: 26px 24px; border: var(--border-rule); border-radius: 16px; background: color-mix(in srgb, var(--paper) 88%, transparent); box-shadow: 0 10px 25px color-mix(in srgb, var(--color-shadow) 22%, transparent); }
+
+@media (max-width: 1050px) {
+  .agenda-workspace { grid-template-columns: 1fr; }
+  .admin-sidebar { position: static; display: block; min-height: 0; padding: 10px; }
+  .admin-sidebar-label, .admin-sidebar-footer { display: none; }
+  .admin-sidebar-nav { display: flex; overflow-x: auto; }
+  .admin-sidebar-nav button { width: max-content; flex: 0 0 auto; }
+}
+
+@media (max-width: 650px) {
+  .agenda-workspace { gap: 16px; }
+  .admin-sidebar { margin-inline: -2px; border-radius: 12px; }
+  .admin-sidebar-nav button { min-height: 40px; padding: 8px 10px; font-size: .75rem; }
+  .admin-sidebar-nav button span { display: none; }
+  .admin-sidebar-nav button i { width: 18px; }
+  .agenda-content { padding-block: 28px 56px; }
+  .agenda-date { width: fit-content; }
+  .agenda-summary { gap: 8px; }
+  .agenda-summary > div, .agenda-summary > div:first-child { border-radius: 12px; }
+  .agenda-filters { padding: 18px; border-radius: 12px; }
+  .appointment-item { margin-top: 10px; padding: 22px 18px; border-radius: 12px; }
 }

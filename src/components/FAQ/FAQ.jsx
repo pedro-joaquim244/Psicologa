@@ -8,7 +8,7 @@ const questions = [
   ['Quanto tempo dura uma sessão?', 'Em geral, as sessões têm duração aproximada de 50 minutos. Os detalhes de duração e formato são combinados no contato inicial, de acordo com o atendimento.'],
   ['O atendimento pode ser online?', 'Sim. O atendimento online acontece por videochamada, em horário previamente combinado. Você precisará de uma conexão estável e de um espaço reservado, onde se sinta à vontade para conversar.'],
   ['Com qual frequência acontecem as sessões?', 'Os encontros costumam ser semanais, mas a frequência é conversada e definida em conjunto, considerando suas necessidades e as particularidades do processo.'],
-  ['Como faço para agendar?', 'Basta entrar em contato pelo WhatsApp no botão “Agendar pelo WhatsApp”. Nesse primeiro contato, conversamos sobre disponibilidade, valores e funcionamento das sessões, e você pode esclarecer suas dúvidas.'],
+  ['Como faço para agendar?', 'Você pode escolher uma data e um horário disponíveis na agenda do site. Se preferir conversar antes de reservar, há uma opção de WhatsApp ao final da página.'],
 ];
 
 export default function FAQ() {

@@ -17,10 +17,10 @@
   background: var(--paper-dark);
   isolation: isolate;
 }
-.approach-images::after { content: ''; position: absolute; inset: 35% 0 0; background: linear-gradient(transparent, rgb(20 36 26 / 78%)); pointer-events: none; }
+.approach-images::after { content: ''; position: absolute; inset: 35% 0 0; background: linear-gradient(transparent, var(--color-image-shade)); pointer-events: none; }
 .approach-image { position: absolute; inset: 0; opacity: 0; transform: scale(1.045); transition: opacity 700ms var(--ease-editorial), transform 1400ms var(--ease-editorial); }
 .approach-image.is-active { opacity: 1; transform: scale(1); }
-.approach-image-label { position: absolute; z-index: 1; bottom: 24px; left: 24px; right: 24px; color: var(--paper); font-size: .75rem; line-height: 1.6; letter-spacing: .1em; }
+.approach-image-label { position: absolute; z-index: 1; bottom: 24px; left: 24px; right: 24px; color: var(--color-on-dark); font-size: .75rem; line-height: 1.6; letter-spacing: .1em; }
 .approach-progress { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; min-height: 48px; }
 .approach-current { font-family: var(--serif); font-size: 1.75rem; font-variant-numeric: lining-nums; }
 .approach-total { color: var(--muted); font-size: .75rem; }

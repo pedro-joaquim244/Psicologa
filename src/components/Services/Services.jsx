@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { images, site, whatsappUrl } from '../../config/site';
+import { images, site } from '../../config/site';
 import ArrowLink from '../Shared/ArrowLink';
 import Photo from '../Shared/Photo';
 import SectionLabel from '../Shared/SectionLabel';
@@ -26,10 +26,14 @@ export default function Services() {
               <span className="service-number" aria-hidden="true">0{index + 1}</span>
               <div className="service-title"><h3>Psicoterapia<br /><em>{service.title}</em></h3><i className={`bi ${service.icon}`} aria-hidden="true" /></div>
               <div className="service-description"><p>{service.text}</p><span className="service-location"><i className={`bi ${service.locationIcon}`} aria-hidden="true" /> {service.location}</span></div>
-              <ArrowLink href={whatsappUrl(`Olá! Gostaria de saber mais sobre a psicoterapia ${service.title}.`)} external className="service-link" aria-label={`Saiba mais sobre psicoterapia ${service.title} pelo WhatsApp`}>Saiba mais</ArrowLink>
+              <ArrowLink href="#agendamento" className="service-link" aria-label={`Ver horários para psicoterapia ${service.title}`}>Ver horários</ArrowLink>
             </div>
           </article>
         ))}
+      </div>
+      <div className="services-booking-cta" data-reveal>
+        <div><span className="eyebrow">PRÓXIMO PASSO</span><p>Escolha um horário disponível e confirme a modalidade que faz sentido para você.</p></div>
+        <ArrowLink href="#agendamento" className="button button-dark">Ver horários disponíveis</ArrowLink>
       </div>
     </section>
   );

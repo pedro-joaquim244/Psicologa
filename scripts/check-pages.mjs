@@ -49,7 +49,7 @@ try {
   await page.waitForURL('**/Psicologa/adm/login');
   await page.evaluate(() => {
     localStorage.setItem('psicologa_token', 'test-pages');
-    localStorage.setItem('psicologa_usuario', JSON.stringify({ nome: 'Helena', tipo: 'psicologa' }));
+    localStorage.setItem('psicologa_usuario', JSON.stringify({ nome: 'Mauricéia', tipo: 'psicologa' }));
   });
   await page.route('**/api/agendamentos', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }));
   await page.goto(`${origin}${base}adm/agenda`);

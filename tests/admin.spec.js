@@ -36,7 +36,7 @@ const appointments = [
 async function mockAuthenticatedSession(page) {
   await page.addInitScript(() => {
     localStorage.setItem('psicologa_token', 'token-de-teste');
-    localStorage.setItem('psicologa_usuario', JSON.stringify({ id: 7, nome: 'Helena Martins', email: 'psicologa@email.com', tipo: 'admin' }));
+    localStorage.setItem('psicologa_usuario', JSON.stringify({ id: 7, nome: 'Mauricéia Soares', email: 'psicologa@email.com', tipo: 'admin' }));
   });
 }
 
@@ -46,13 +46,13 @@ async function mockApi(page, records = appointments) {
     const url = new URL(request.url());
 
     if (url.pathname === '/api/auth/login') {
-      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ mensagem: 'Login realizado com sucesso!', token: 'token-de-teste', usuario: { id: 7, nome: 'Helena Martins', email: 'psicologa@email.com', tipo: 'admin', email_verificado: true } }) });
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ mensagem: 'Login realizado com sucesso!', token: 'token-de-teste', usuario: { id: 7, nome: 'Mauricéia Soares', email: 'psicologa@email.com', tipo: 'admin', email_verificado: true } }) });
     }
     if (url.pathname === '/api/auth/verificar-email') {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ token: 'token-de-teste', usuario: { id: 7, nome: 'Helena Martins', email: 'psicologa@email.com', tipo: 'admin', email_verificado: true } }),
+        body: JSON.stringify({ token: 'token-de-teste', usuario: { id: 7, nome: 'Mauricéia Soares', email: 'psicologa@email.com', tipo: 'admin', email_verificado: true } }),
       });
       return;
     }
@@ -86,12 +86,12 @@ test('protege a agenda e autentica mantendo a sessão', async ({ page }) => {
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
 
   await expect(page).toHaveURL(/\/adm\/agenda$/);
-  await expect(page.getByRole('heading', { name: 'Olá, Helena.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Olá, Mauricéia.' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Marina Oliveira' })).toBeVisible();
   await expect.poll(() => page.evaluate(() => ({
     token: localStorage.getItem('psicologa_token'),
     user: JSON.parse(localStorage.getItem('psicologa_usuario') || 'null')?.nome,
-  }))).toEqual({ token: 'token-de-teste', user: 'Helena Martins' });
+  }))).toEqual({ token: 'token-de-teste', user: 'Mauricéia Soares' });
 });
 
 test('filtra atendimentos por status, modalidade e nome', async ({ page }) => {

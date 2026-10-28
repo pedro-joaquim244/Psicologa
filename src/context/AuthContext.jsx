@@ -1,11 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useLocation } from 'react-router-dom';
-import { AUTH_EXPIRED_EVENT, getPublicConfig, loginAdmin, loginDemo, loginPatient, registerPatient, verifyEmail } from "../services/api";
+import { AUTH_EXPIRED_EVENT, getPublicConfig, loginAdmin, loginDemo, loginPatient, registerPatient, updatePatientAccount, verifyEmail } from "../services/api";
 import { clearStoredSession, getStoredSession, saveStoredSession } from "../services/authStorage";
 
 const AuthContext = createContext(null);
 const readSessions = () => ({ paciente: getStoredSession('paciente'), profissional: getStoredSession('profissional') });
-const defaultPublicConfig = { demoMode: false, emailDelivery: true, publicRegistration: true, demoAccess: { paciente: false, profissional: false } };
+const defaultPublicConfig = { ready: false, demoMode: false, emailDelivery: false, publicRegistration: false, demoAccess: { paciente: false, profissional: false } };
 
 export function AuthProvider({ children }) {
   const [sessions, setSessions] = useState(readSessions);
@@ -26,7 +26,11 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    getPublicConfig({ signal: controller.signal }).then(setPublicConfig).catch(() => {});
+    getPublicConfig({ signal: controller.signal })
+      .then((config) => setPublicConfig({ ...defaultPublicConfig, ...config, ready: true }))
+      .catch((error) => {
+        if (error.name !== 'AbortError') setPublicConfig({ ...defaultPublicConfig, ready: true, unavailable: true });
+      });
     return () => controller.abort();
   }, []);
 
@@ -60,6 +64,14 @@ export function AuthProvider({ children }) {
       if (!data?.token || !data?.usuario?.email_verificado) throw new Error('A API retornou uma sessão inválida.');
       saveStoredSession(data.token, data.usuario);
       setSessions(readSessions());
+    },
+    async updatePatientProfile(details) {
+      if (!session.token || session.user?.tipo !== 'paciente') throw new Error('Entre novamente para atualizar seus dados.');
+      const data = await updatePatientAccount(details, session.token);
+      if (!data?.usuario?.id) throw new Error('A resposta não confirmou a atualização da conta.');
+      saveStoredSession(session.token, data.usuario);
+      setSessions(readSessions());
+      return data.usuario;
     },
     logout() {
       clearStoredSession(audience);

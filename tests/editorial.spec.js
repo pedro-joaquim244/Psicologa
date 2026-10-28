@@ -29,12 +29,12 @@ test('sistema editorial e novas seções mantêm leitura em todas as telas', asy
 
 test('cada atendimento mantém sua foto bem enquadrada e seus links acessíveis', async ({ page }) => {
   await page.goto('/#atendimento');
-  const online = page.getByRole('link', { name: 'Saiba mais sobre psicoterapia online pelo WhatsApp' });
+  const online = page.getByRole('link', { name: 'Ver horários para psicoterapia online' });
   await online.focus();
   await expect(page.locator('.services-preview img').nth(1)).toHaveClass('is-active');
   await expect(page.locator('.service-row').nth(1)).toHaveClass(/is-active/);
-  await expect(online).toHaveAttribute('href', /wa.me.*online/);
-  await page.getByRole('link', { name: 'Saiba mais sobre psicoterapia presencial pelo WhatsApp' }).focus();
+  await expect(online).toHaveAttribute('href', /#agendamento$/);
+  await page.getByRole('link', { name: 'Ver horários para psicoterapia presencial' }).focus();
   await expect(page.locator('.services-preview img').nth(0)).toHaveClass('is-active');
   for (const frame of await page.locator('.services-preview').all()) {
     await frame.scrollIntoViewIfNeeded();

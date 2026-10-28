@@ -153,12 +153,20 @@ export async function applySlotAction(connection, id, body) {
     grouped.get(entry.row.id).selected.add(entry.slot.horario);
   }
   const replacements = [];
+  const protectedSlots = [];
+  let removed = 0;
   for (const { row, selected: starts } of grouped.values()) {
     for (const slot of generateSlots([row])) {
       const chosen = starts.has(slot.horario);
       if (chosen && body.acao === 'remover') {
-        await assertExistingBookingsRemainCovered(connection, slotWindow(row, slot));
-        continue;
+        try {
+          await assertExistingBookingsRemainCovered(connection, slotWindow(row, slot));
+          removed += 1;
+          continue;
+        } catch (error) {
+          if (!(error instanceof AgendaError) || error.status !== 409) throw error;
+          protectedSlots.push({ id: Number(row.id), horario: slot.horario, fim: slot.fim });
+        }
       }
       let window = slotWindow(row, slot);
       if (chosen && body.acao === 'duracao') {
@@ -171,6 +179,10 @@ export async function applySlotAction(connection, id, body) {
       if (replacements.length > MAX_SLOTS) throw new AgendaError(`Este período contém mais de ${MAX_SLOTS} horários. Divida a alteração.`);
     }
   }
+  if (body.acao === 'remover' && removed === 0 && protectedSlots.length) {
+    const periods = protectedSlots.map((slot) => `${slot.horario}–${slot.fim}`).join(', ');
+    throw new AgendaError(`Não foi possível remover ${periods}: há consulta ativa nesses horários.`, 409);
+  }
   // Reconstrói apenas os períodos selecionados, preservando os outros slots e
   // todas as consultas. O lock do profissional e a transação cobrem a operação.
   for (const { row } of grouped.values()) await connection.query('DELETE FROM disponibilidades WHERE id = ? AND profissional_id = ?', [row.id, id]);
@@ -178,7 +190,9 @@ export async function applySlotAction(connection, id, body) {
   if (body.acao === 'duracao') {
     for (const entry of replacements.filter((item) => item.changed)) await assertAvailabilityCompatible(connection, entry.window, entry.id);
   }
-  return body.acao === 'remover' ? { removidos: selected.length } : { alterados: selected.length };
+  return body.acao === 'remover'
+    ? { removidos: removed, preservados: protectedSlots.length, horarios_preservados: protectedSlots }
+    : { alterados: selected.length };
 }
 
 export async function blockOccurrence(connection, id, row, body) {

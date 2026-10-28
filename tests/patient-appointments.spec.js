@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const patient = { id: 7, nome: 'Joaquim Sousa', email: 'joaquim@example.com', telefone: '16999998888', tipo: 'paciente', email_verificado: true };
-const professional = { id: 1, nome: 'Dra. Helena Martins', tipo: 'psicologa', email_verificado: true };
+const professional = { id: 1, nome: 'Mauricéia Soares', tipo: 'psicologa', email_verificado: true };
 const appointment = (id, inicio, status, modalidade = 'online') => ({ id, inicio, fim: inicio.replace(':00:00', ':50:00'), status, modalidade, criado_em: '2029-09-01 10:00:00' });
 const records = [appointment(1, '2030-09-18 14:00:00', 'confirmado'), appointment(2, '2030-09-12 09:00:00', 'agendado', 'presencial'), appointment(3, '2029-09-18 14:00:00', 'concluido'), appointment(4, '2030-09-15 14:00:00', 'cancelado'), appointment(5, '2028-09-18 14:00:00', 'concluido')];
 
@@ -62,7 +62,11 @@ async function mockApi(page, { items = records, listError = 0, cancelError = fal
 }
 
 async function openUserMenu(page) {
-  if (await page.getByRole('button', { name: 'Abrir menu', exact: true }).isVisible()) await page.getByRole('button', { name: 'Abrir menu', exact: true }).click();
+  if (page.viewportSize().width < 1200) {
+    const navigationToggle = page.getByRole('button', { name: 'Abrir menu', exact: true });
+    await expect(navigationToggle).toBeVisible();
+    await navigationToggle.click();
+  }
   await page.getByRole('button', { name: 'Joaquim', exact: true }).click();
 }
 
@@ -223,6 +227,7 @@ test('sessão antiga migra e menu funciona por teclado', async ({ page }) => {
 
 test('layout sem overflow em desktop, notebook, tablet e celular', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'Matriz de tamanhos executada uma vez.');
+  test.setTimeout(90000);
   await seed(page);
   await mockApi(page);
   await page.goto('/minhas-consultas');

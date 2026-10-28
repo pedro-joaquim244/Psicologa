@@ -3,12 +3,12 @@ import Navbar from '../Navbar/Navbar';
 import Footer from '../Footer/Footer';
 import SectionLink from '../Shared/SectionLink';
 import '../../styles/patient.css';
+import { site } from '../../config/site';
 
 export default function PatientLayout({ label, title, description, children }) {
   useEffect(() => {
     const previous = document.title;
-    document.title = `${label} | Dra. Helena Martins`;
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    document.title = `${label} | ${site.shortName}`;
     return () => { document.title = previous; };
   }, [label]);
 

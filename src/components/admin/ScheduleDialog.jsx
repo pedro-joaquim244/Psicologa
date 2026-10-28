@@ -1,4 +1,5 @@
 import { useId, useLayoutEffect, useRef } from 'react';
+import { lockPageScroll, unlockPageScroll } from '../../lib/pageScrollLock';
 
 function focusableElements(dialog) {
   return [...dialog.querySelectorAll('button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])')]
@@ -18,15 +19,15 @@ export default function ScheduleDialog({ title, description, busy = false, onClo
     const dialog = dialogRef.current;
     previousFocus.current = document.activeElement;
     if (!dialog.open) dialog.showModal();
-    document.body.classList.add('modal-open');
+    lockPageScroll();
 
     const first = focusableElements(dialog)[0];
-    (first || dialog).focus();
+    (first || dialog).focus({ preventScroll: true });
 
     return () => {
       if (dialog.open) dialog.close();
-      document.body.classList.remove('modal-open');
-      previousFocus.current?.focus?.();
+      unlockPageScroll();
+      previousFocus.current?.focus?.({ preventScroll: true });
     };
   }, []);
 

@@ -6,12 +6,15 @@ import AppointmentItem from "../../components/admin/AppointmentItem";
 import ConfirmationModal from "../../components/admin/ConfirmationModal";
 import AgendaSummary from "../../components/admin/AgendaSummary";
 import AgendaAvailability from '../../components/admin/AgendaAvailability';
+import AdminSidebar from '../../components/admin/AdminSidebar';
 import { AdminToast, EmptyAgenda, ErrorAgenda, LoadingAgenda } from "../../components/admin/AdminFeedback";
 import FloralMark from "../../components/Shared/FloralMark";
+import ThemeToggle from "../../components/Shared/ThemeToggle";
 import { useAuth } from "../../context/AuthContext";
 import { listAppointments, updateAppointmentStatus } from "../../services/api";
 import { getGreetingName, isSameLocalDay, normalizeStatus, parseApiDate } from "../../utils/adminFormatters";
 import "../../styles/admin.css";
+import { site } from '../../config/site';
 
 const initialFilters = { status: "todos", search: "", modality: "todos" };
 const actionStatus = { confirmar: "confirmado", concluir: "concluido", cancelar: "cancelado" };
@@ -50,10 +53,10 @@ export default function AgendaAdmin() {
   }, [token]);
 
   useEffect(() => {
-    document.title = "Agenda administrativa — Helena Martins";
+    document.title = `Agenda administrativa — ${site.shortName}`;
     const controller = new AbortController();
     loadAgenda(controller.signal);
-    return () => { document.title = "Helena Martins — Psicologia & Escuta"; controller.abort(); };
+    return () => { document.title = `${site.shortName} — Psicologia & Escuta`; controller.abort(); };
   }, [loadAgenda]);
 
   useEffect(() => {
@@ -111,10 +114,12 @@ export default function AgendaAdmin() {
 
   return (
     <main className="admin-page agenda-page">
-      <header className="admin-header"><div className="admin-container"><AdminBrand compact /><nav aria-label="Navegação administrativa"><Link to="/">Ver site <i className="bi bi-arrow-up-right" aria-hidden="true" /></Link><button type="button" onClick={handleLogout}>Sair <i className="bi bi-box-arrow-right" aria-hidden="true" /></button></nav></div></header>
+      <header className="admin-header"><div className="admin-container"><AdminBrand compact /><div className="admin-header-actions"><ThemeToggle /><nav aria-label="Ações da conta"><Link to="/">Ver site <i className="bi bi-arrow-up-right" aria-hidden="true" /></Link><button type="button" onClick={handleLogout}>Sair <i className="bi bi-box-arrow-right" aria-hidden="true" /></button></nav></div></div></header>
 
-      <div className="admin-container agenda-content">
-        <section className="agenda-hero" aria-labelledby="agenda-title"><div><span className="admin-kicker">AGENDA · ÁREA RESERVADA</span><h1 id="agenda-title">Olá, {getGreetingName(user?.nome)}.</h1><p>Acompanhe e organize seus próximos atendimentos.</p></div><div className="agenda-date"><FloralMark /><span>{new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(new Date())}</span></div></section>
+      <div className="admin-container agenda-workspace">
+        <AdminSidebar view={view} onViewChange={setView} user={user} onLogout={handleLogout} />
+        <div className="agenda-content">
+        <section className="agenda-hero" aria-labelledby="agenda-title"><div><span className="admin-kicker">AGENDA · ÁREA RESERVADA</span><h1 id="agenda-title">Olá, {getGreetingName(user?.nome)}.</h1><p className="agenda-page-title">Agenda de atendimentos</p><p>Organize suas consultas e disponibilidades com tranquilidade.</p></div><div className="agenda-date"><FloralMark /><span>{new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(new Date())}</span></div></section>
 
         <AgendaAvailability view={view} onViewChange={setView} appointments={appointments} onAppointmentsChange={loadAgenda} />
         {view === 'atendimentos' && !loading && !error && <AgendaSummary summary={summary} />}
@@ -126,9 +131,10 @@ export default function AgendaAdmin() {
           {!loading && !error && !filteredAppointments.length && <EmptyAgenda filtered={appointments.length > 0} onClear={() => setFilters(initialFilters)} />}
           {!loading && !error && filteredAppointments.map((appointment) => <AppointmentItem key={appointment.id} appointment={appointment} disabled={Boolean(busy.action)} busyAction={busy.id === appointment.id ? busy.action : null} onAction={runAction} onCancel={setCancelTarget} />)}
         </section>}
+        </div>
       </div>
 
-      <footer className="admin-footer"><div className="admin-container"><span>HELENA MARTINS · PSICOLOGIA & ESCUTA</span><span>Sessão protegida por autenticação.</span></div></footer>
+      <footer className="admin-footer"><div className="admin-container"><span>{site.shortName.toLocaleUpperCase('pt-BR')} · PSICOLOGIA & ESCUTA</span><span>Sessão protegida por autenticação.</span></div></footer>
       <ConfirmationModal error={cancelError} appointment={cancelTarget} busy={busy.id === cancelTarget?.id && busy.action === "cancelar"} onClose={closeCancelModal} onConfirm={() => runAction(cancelTarget, "cancelar")} />
       <AdminToast message={toast?.message} tone={toast?.tone} onClose={() => setToast(null)} />
     </main>

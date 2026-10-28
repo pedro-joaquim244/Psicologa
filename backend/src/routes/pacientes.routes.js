@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import db from '../database.js';
 import { autenticarToken, somentePaciente } from '../middlewares/autenticacao.js';
 
-import { loginLimiter, registerLimiter, resendLimiter, verificationLimiter } from '../middlewares/limitAuth.js';
+import { loginLimiter, registerLimiter, resendLimiter, verificationLimiter, writeLimiter } from '../middlewares/limitAuth.js';
 import { emailVerification, verificationError } from '../services/emailVerification.js';
 import { authenticateCredentials, createAuthenticatedSession, EMAIL_NOT_VERIFIED, validCredentials } from '../services/authentication.js';
 import { addVerificationRoutes } from './verification.routes.js';
@@ -58,6 +58,22 @@ router.post('/login', loginLimiter, async (req, res) => {
 
 router.get('/me', autenticarToken, somentePaciente, (req, res) => {
   res.json({ usuario: { ...req.paciente, tipo: 'paciente' } });
+});
+
+router.patch('/me', autenticarToken, somentePaciente, writeLimiter, async (req, res) => {
+  const { nome, telefone } = req.body || {};
+  const normalizedName = typeof nome === 'string' ? nome.trim() : '';
+  const normalizedPhone = typeof telefone === 'string' ? telefone.replace(/\D/g, '') : '';
+  if (normalizedName.length < 3 || normalizedName.length > 150 || !/^\d{10,13}$/.test(normalizedPhone)) {
+    return res.status(400).json({ erro: 'Informe nome completo e WhatsApp com DDD.' });
+  }
+  try {
+    await db.query('UPDATE pacientes SET nome = ?, telefone = ? WHERE id = ? AND ativo = 1', [normalizedName, normalizedPhone, req.paciente.id]);
+    res.json({ usuario: { ...req.paciente, nome: normalizedName, telefone: normalizedPhone, tipo: 'paciente' } });
+  } catch (error) {
+    console.error('Erro ao atualizar conta do paciente:', error);
+    res.status(500).json({ erro: 'Não foi possível atualizar seus dados agora.' });
+  }
 });
 
 export default router;

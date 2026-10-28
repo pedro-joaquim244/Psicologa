@@ -55,7 +55,7 @@ export function isSameLocalDay(value, reference = new Date()) {
 
 export function getGreetingName(name = "") {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "Dra. Helena";
+  if (!parts.length) return "Psicóloga";
   return /^(dra?\.?|psicóloga)$/i.test(parts[0]) && parts[1] ? `${parts[0]} ${parts[1]}` : parts[0];
 }
 

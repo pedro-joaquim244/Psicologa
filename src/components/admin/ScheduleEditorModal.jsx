@@ -1,6 +1,7 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { clinicDateKey } from '../../utils/scheduling';
 import { DAY_ORDER, WEEKDAYS, previewPeriod } from '../../utils/agendaManagement';
+import { lockPageScroll, unlockPageScroll } from '../../lib/pageScrollLock';
 
 const timeMinutes = (value) => {
   const [hour, minute] = String(value || '').slice(0, 5).split(':').map(Number);
@@ -81,12 +82,12 @@ export default function ScheduleEditorModal({ editor, defaults, busy, error, onC
     const previous = document.activeElement;
     const dialog = dialogRef.current;
     if (!dialog.open) dialog.showModal();
-    document.body.classList.add('modal-open');
-    initialRef.current?.focus();
+    lockPageScroll();
+    initialRef.current?.focus({ preventScroll: true });
     return () => {
       if (dialog.open) dialog.close();
-      document.body.classList.remove('modal-open');
-      previous?.focus?.();
+      unlockPageScroll();
+      previous?.focus?.({ preventScroll: true });
     };
   }, []);
 

@@ -1,23 +1,22 @@
 import imageManifest from './image-manifest.json';
 
-// Dados demonstrativos.
-// Substitua pelos dados da profissional antes de publicar.
-
 export const site = {
-  name: "Dra. Helena Martins",
-  shortName: "Helena Martins",
+  name: "Mauricéia Soares",
+  shortName: "Mauricéia Soares",
+  initials: "MS",
   profession: "Psicóloga Clínica",
   education: "Psicologia",
-  crp: "CRP 00/000000",
-  location: "Ribeirão Preto — SP",
-  whatsappNumber: "5500000000000",
-  email: "contato@example.com",
-  instagramUrl: "https://www.instagram.com/",
+  crp: "",
+  location: "",
+  whatsappNumber: "",
+  email: "",
+  instagramUrl: "",
 };
 
 export function whatsappUrl(
   message = "Olá! Gostaria de saber mais sobre o atendimento e agendar uma conversa."
 ) {
+  if (!site.whatsappNumber) return null;
   return `https://wa.me/${site.whatsappNumber}?text=${encodeURIComponent(
     message
   )}`;

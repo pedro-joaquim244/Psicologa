@@ -7,9 +7,12 @@
 .hero-description { max-width: 395px; color: var(--muted); font-size: var(--fs-body); line-height: 1.8; margin-top: var(--space-lg); }
 .hero-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-md); margin-top: var(--space-md); }
 .hero-actions .button { font-size: var(--fs-small); }
+.hero-trust-list { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 0; margin: var(--space-md) 0 0; list-style: none; color: var(--muted); font-size: var(--fs-small); }
+.hero-trust-list li { display: inline-flex; align-items: center; gap: 7px; }
+.hero-trust-list .bi { color: var(--color-sage-ink); }
 .hero-photo { position: absolute; z-index: 1; left: 55%; top: 20%; width: calc(45% - max(var(--gutter), (100% - var(--container)) / 2)); height: 65%; background: var(--paper-dark); transform-origin: center; overflow: hidden; }
 .hero-photo { border-radius: 20px; }
-.hero-photo-shade { position: absolute; inset: 0; background: var(--forest); opacity: 0; }
+.hero-photo-shade { position: absolute; inset: 0; background: var(--color-deep-surface); opacity: 0; }
 .hero-badge { position: absolute; z-index: 3; left: calc(55% - 64px); bottom: 12%; width: 132px; border-radius: 50%; background: var(--paper); padding: 5px; }
 .photo-note { position: absolute; top: calc(85% + 12px); right: max(var(--gutter), calc((100% - var(--container)) / 2)); font-family: var(--serif); font-size: 1.1rem; font-style: italic; color: var(--muted); }
 .hero-side-note { position: absolute; right: calc(var(--gutter) / 2 - 5px); top: 40%; writing-mode: vertical-rl; font-size: var(--fs-label); letter-spacing: .2em; }
@@ -18,7 +21,7 @@
 .hero-meta a { display: flex; align-items: center; gap: var(--space-sm); }
 .scroll-circle { width: 38px; height: 38px; border: var(--border-rule); border-radius: 50%; display: grid; place-items: center; font-size: 1rem; }
 .hero-index { font-family: var(--serif); color: var(--forest); font-size: 1.1rem; }
-.hero-photo-message { pointer-events: none; position: absolute; z-index: 3; left: var(--gutter); bottom: 12%; color: var(--paper); opacity: 0; }
+.hero-photo-message { pointer-events: none; position: absolute; z-index: 3; left: var(--gutter); bottom: 12%; color: var(--color-on-dark); opacity: 0; }
 .hero-photo-message p { font-family: var(--serif); font-size: var(--fs-display-xl); line-height: 1; margin-top: var(--space-md); letter-spacing: -.04em; }
 @media (min-width: 1024px) and (max-height: 800px) {
   .hero { min-height: 680px; }
@@ -46,6 +49,7 @@
   .hero-eyebrow { line-height: 1.8; margin-bottom: var(--space-md); font-size: .625rem; }
   .hero-description { margin-top: var(--space-md); max-width: 340px; }
   .hero-actions { gap: 8px var(--space-md); }
+  .hero-trust-list { gap: 7px 14px; font-size: .75rem; }
   .hero-photo { height: auto; aspect-ratio: 4 / 3; margin-top: var(--space-lg); }
   .hero-meta { gap: var(--space-sm); align-items: center; }
   .hero-meta > span { max-width: 185px; line-height: 2; }

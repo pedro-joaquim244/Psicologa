@@ -5,7 +5,7 @@ import { buildAppointmentEmail, buildLoginCodeEmail, sendEmailMessage } from '..
 test('builds an accessible multipart confirmation email', () => {
   const message = buildLoginCodeEmail('123456');
 
-  assert.equal(message.subject, 'Confirme seu e-mail — Helena Martins');
+  assert.equal(message.subject, 'Confirme seu e-mail — Mauricéia Soares');
   assert.match(message.text, /código de confirmação é: 123456/);
   assert.match(message.text, /10 minutos/);
   assert.match(message.html, /<html lang="pt-BR">/);
@@ -86,7 +86,7 @@ test('escapes dynamic content before placing it in HTML', () => {
 
 test('builds a discreet branded appointment notification without clinical data', () => {
   const message = buildAppointmentEmail('confirmacao', {
-    nome: 'Marina <Oliveira>', inicio: '2035-09-18 14:00:00', fim: '2035-09-18 14:50:00', modalidade: 'online', profissionalNome: 'Dra. Helena Martins',
+    nome: 'Marina <Oliveira>', inicio: '2035-09-18 14:00:00', fim: '2035-09-18 14:50:00', modalidade: 'online', profissionalNome: 'Mauricéia Soares',
   });
   assert.match(message.subject, /Consulta confirmada/);
   assert.match(message.text, /18 de setembro de 2035.*14:00/);

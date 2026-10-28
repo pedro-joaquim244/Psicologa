@@ -31,7 +31,7 @@ async function enqueueNotification(appointmentId, type) {
   try {
     const [rows] = await db.query(
       `SELECT a.id, a.nome_cliente, a.email_cliente, a.modalidade, a.inicio, a.fim,
-              COALESCE(p.nome, 'Helena Martins') AS profissional_nome
+              COALESCE(p.nome, 'Mauricéia Soares') AS profissional_nome
        FROM agendamentos a LEFT JOIN profissionais p ON p.id = a.profissional_id
        WHERE a.id = ? LIMIT 1`,
       [appointmentId],

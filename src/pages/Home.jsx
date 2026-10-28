@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar/Navbar';
 import Hero from '../components/Hero/Hero';
 import Process from '../components/Process/Process';
@@ -40,25 +39,15 @@ function animatePage({ desktop, reduced }, root) {
 
 export default function Home() {
   const ref = useRef(null);
-  const { hash } = useLocation();
   useScrollScene(ref, animatePage);
   useEffect(() => {
     let disposed = false;
     let frame;
-    const refresh = () => { if (!disposed) ScrollTrigger.refresh(); };
-    const restoreAnchor = () => {
-      refresh();
-      const hash = window.location.hash;
-      if (hash) {
-        let id;
-        try { id = decodeURIComponent(hash.slice(1)); } catch { return; }
-        document.getElementById(id)?.scrollIntoView({ behavior: 'instant' });
-      }
-    };
-    document.fonts.ready.then(() => { if (!disposed) frame = requestAnimationFrame(restoreAnchor); });
+    const refresh = () => { if (!disposed) frame = requestAnimationFrame(() => ScrollTrigger.refresh()); };
+    document.fonts.ready.then(refresh);
     window.addEventListener('load', refresh);
     return () => { disposed = true; cancelAnimationFrame(frame); window.removeEventListener('load', refresh); };
-  }, [hash]);
+  }, []);
   return (
     <div ref={ref}>
       <Navbar />

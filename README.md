@@ -1,4 +1,4 @@
-# Helena Martins — Psicologia & Escuta
+# Mauricéia Soares — Psicologia & Escuta
 
 Landing page editorial e área administrativa em React + Vite. O projeto usa Cormorant Garamond e Manrope, Bootstrap Icons e animações GSAP com ScrollTrigger.
 
@@ -80,6 +80,16 @@ No backend, instale as dependências com `npm install` e execute `npm run migrat
 
 Adicione ao `backend/.env` as variáveis de `backend/.env.example`: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_FROM`. Use um remetente autorizado pelo provedor. A integração usa [SMTP com Nodemailer](https://nodemailer.com/smtp), com TLS na porta 465 e STARTTLS nas demais (587 por padrão). Reinicie o backend após configurar. Nunca use variáveis `VITE_` para essas credenciais.
 
+### Notificações de agendamento
+
+O backend envia e-mails automáticos para solicitação recebida, confirmação, conclusão, cancelamento, recusa e reagendamento. Os modelos reutilizam a identidade visual do site e incluem somente nome, data/horário, modalidade e profissional — nunca informações clínicas.
+
+Use as mesmas variáveis SMTP acima com um provedor que ofereça SMTP autenticado, como Brevo ou Resend (via credencial SMTP), e um remetente/domínio previamente autorizado. No Resend, crie uma API key e use as credenciais SMTP exibidas no painel; no Brevo, gere uma chave SMTP em **Transactional > SMTP & API**. Não coloque essas credenciais no frontend ou no repositório.
+
+`npm run migrate` cria a tabela aditiva `notificacoes_agendamento`. Ela registra o evento, o destinatário, tentativas, entrega e falhas sem registrar conteúdo clínico. A chave única do evento impede duplicidade; falhas do provedor deixam a consulta atualizada e entram em retentativa automática, no máximo três vezes. Ajuste opcionalmente `NOTIFICATION_RETRY_INTERVAL_MS` (padrão: `300000`) no backend. Em hospedagens sem processo persistente, agende uma execução recorrente da API/worker para garantir que a fila seja processada mesmo após reinicializações.
+
+As ações atuais de confirmar, concluir e cancelar já disparam a notificação. A API também disponibiliza `PATCH /api/agendamentos/:id/recusar` e `PATCH /api/agendamentos/:id/reagendar` (corpo `{ data, horario, modalidade? }`) para os fluxos administrativos que vierem a usar recusa e reagendamento, sem alteração visual no painel existente.
+
 Sem SMTP configurado, o envio retorna erro e o acesso permanece bloqueado. Se o cadastro ou provisionamento já tiver criado a conta antes da falha de envio, a tela orienta a entrar e solicitar explicitamente o reenvio.
 
 Os códigos têm seis dígitos, valem por 10 minutos e são de uso único. O reenvio pode ocorrer após 60 segundos e invalida o código anterior. Há limite de cinco erros e três envios por conta em uma janela de 15 minutos, persistido no MySQL, além dos limites de requisições da API. O banco guarda um HMAC do código, nunca o código em texto. A validação e o consumo usam transação e bloqueio da conta para evitar reutilização simultânea.
@@ -129,6 +139,8 @@ A área administrativa reutiliza a mesma identidade da landing: fundo creme, ver
 
 O projeto inclui navegação por teclado, estados de foco, modal com foco preso e retorno ao acionador, mensagens acessíveis, alternativa para movimento reduzido e layouts testados entre 320 e 1920 pixels.
 
+O tema acompanha a preferência clara ou escura do sistema na primeira visita. O botão com ícone no cabeçalho permite trocar o modo a qualquer momento, e a escolha fica salva em `localStorage` na chave `psicologa_tema`. O controle também está disponível nas telas de acesso e na agenda administrativa.
+
 ## Testes
 
 ```sh
@@ -167,9 +179,9 @@ Depois desse build, `node scripts/check-pages.mjs` verifica a landing, assets e 
 
 Para a integração funcionar na publicação, hospede a API em HTTPS e defina `VITE_API_URL` com esse endereço **antes do build**. Configure `FRONTEND_URL` no backend com a origem do site, por exemplo `https://seu-usuario.github.io` (sem `/Psicologa/`). GitHub Pages hospeda o frontend estático; `localhost:3333` serve apenas ao desenvolvimento local. Nenhum segredo do backend deve ser colocado em variáveis `VITE_`.
 
-## Personalização antes da publicação
+## Identidade e dados públicos
 
-Nome, CRP, retrato e contatos presentes na landing são demonstrativos. Atualize `src/config/site.js`, os textos dos componentes e as fotografias de `public/images/` com dados e imagens autorizados antes de publicar.
+O nome confirmado da profissional fica centralizado em `src/config/site.js`. CRP, cidade, telefone, e-mail e Instagram permanecem vazios enquanto não houver dados confirmados; os componentes ocultam esses campos em vez de publicar placeholders. As fotografias continuam identificadas como ilustrativas em `public/images/IMAGES.md`.
 
 ## Dependências principais
 
@@ -188,12 +200,16 @@ O agendamento preserva a constraint existente de slots ativos e usa uma transaç
 
 Login e cadastro podem rolar verticalmente quando o teclado, mensagens ou a altura da tela exigirem. Modais têm altura máxima e rolagem interna. As requisições continuam separadas por perfil e pacientes recebem somente os próprios dados.
 
-### Vercel Services
+### Vercel, Render e separação entre demo e produção
 
-Mantenha o projeto configurado com framework **Services**. O arquivo vercel.json conserva os serviços frontend (raiz) e backend (pasta backend), encaminha /api ao Express e aplica o fallback /index.html somente dentro do frontend. Isso prepara as rotas React para acesso direto sem capturar a API. Configuração conforme [Vercel Services](https://vercel.com/kb/guide/vercel-services) e [Vite SPA](https://vercel.com/docs/frameworks/frontend/vite#using-vite-to-make-spas).
+`vercel.json` publica somente o frontend Vite e aplica o fallback da SPA. A API fica no Render; por isso a Vercel precisa de `VITE_API_URL=https://<serviço>.onrender.com`, contendo apenas a origem, sem `/api`. O Render precisa de `FRONTEND_URL=https://psicologa-olive.vercel.app`, também sem caminho.
 
-- Mesma origem: deixe VITE_API_URL vazia/removida no build. Outro domínio de API: defina sua origem HTTPS, sem /api.
-- Backend: configure DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET aleatório, JWT_EXPIRES_IN e FRONTEND_URL com a origem pública real.
-- SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS e SMTP_FROM pertencem exclusivamente ao backend. A porta 465 ativa TLS; demais portas usam STARTTLS. Não há variável SECURE em uso.
-- TRUST_PROXY é opcional e deve listar somente IPs/sub-redes de proxies conhecidos. O limite por IP é local ao processo; em múltiplas instâncias, configure também limitação de tráfego na infraestrutura. O limite de desafios por conta já é persistido no MySQL.
-- SMTP real, banco remoto e deploy Vercel devem ser validados no ambiente de publicação. Os testes locais não comprovam entrega de mensagens, acesso a um MySQL remoto ou roteamento no domínio final.
+O `render.yaml` continua descrevendo o ambiente demonstrativo atual: `DEMO_MODE=true`, cadastro e e-mail desligados, contas fictícias `@example.invalid` e acesso demo explícito. Para ativar um serviço de produção separado, configure no Render, sem gravar valores no Git:
+
+- `DEMO_MODE=false`, `DEMO_AUTO_PROVISION=false` e `DEMO_PUBLIC_LOGIN=false`;
+- `PUBLIC_REGISTRATION_ENABLED=true`;
+- `EMAIL_PROVIDER=resend`, `RESEND_API_KEY` e `EMAIL_FROM` com domínio/remetente verificados; ou as variáveis SMTP documentadas se o provedor permitir;
+- `DATABASE_URL`, `DATABASE_SSL=require`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `FRONTEND_URL` e as opções de pool documentadas em `backend/.env.example`;
+- `PUBLIC_PROFESSIONAL_ID` com o identificador real confirmado no banco, caso ele não seja `1`.
+
+Depois, altere `VITE_API_URL` na Vercel para a URL desse serviço de produção e gere um novo deploy. Não reutilize `DATABASE_URL`, `JWT_SECRET`, `RESEND_API_KEY` ou credenciais SMTP em variáveis `VITE_`. Sem provedor de e-mail validado, o cadastro deve permanecer desativado; a aplicação não cria bypass de confirmação.

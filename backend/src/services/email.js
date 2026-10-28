@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 import { emailDeliveryEnabled } from '../config/runtime.js';
 
 const BRAND = {
-  name: 'Helena Martins',
+  name: 'Mauricéia Soares',
   descriptor: 'Psicologia & Escuta',
   background: '#f3f1ea',
   surface: '#fffdf8',
@@ -83,7 +83,7 @@ export function buildLoginCodeEmail(code) {
                   </td>
                   <td width="48" valign="middle" align="right">
                     <table role="presentation" width="44" height="44" cellpadding="0" cellspacing="0" border="0" style="width:44px; height:44px;">
-                      <tr><td align="center" valign="middle" width="42" height="42" style="width:42px; height:42px; border:1px solid #75847b; border-radius:50%; color:${BRAND.background}; font-family:Georgia, 'Times New Roman', serif; font-size:16px; line-height:42px;">HM</td></tr>
+                      <tr><td align="center" valign="middle" width="42" height="42" style="width:42px; height:42px; border:1px solid #75847b; border-radius:50%; color:${BRAND.background}; font-family:Georgia, 'Times New Roman', serif; font-size:16px; line-height:42px;">MS</td></tr>
                     </table>
                   </td>
                 </tr>

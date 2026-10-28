@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import SectionLabel from '../Shared/SectionLabel';
 import FloralMark from '../Shared/FloralMark';
 import BookingCalendar from './BookingCalendar';
 import BookingForm from './BookingForm';
 import { createAppointment, listAvailableSlots } from '../../services/api';
 import { bookingDateLabel, clinicDateKey, clinicNow, validateBooking } from '../../utils/scheduling';
+import { clearBookingDraft, readBookingDraft, saveBookingDraft } from '../../utils/bookingDraft';
 import { ScrollTrigger } from '../../lib/motion';
 import '../../styles/scheduling.css';
 
@@ -15,7 +15,7 @@ const emptyForm = { nome: '', telefone: '', email: '', modalidade: 'online' };
 export default function Scheduling() {
   const { isPatient, isProfessional, token, user, publicConfig } = useAuth();
   const location = useLocation();
-  const resumeBooking = useRef(location.state?.booking);
+  const resumeBooking = useRef(location.state?.booking ?? readBookingDraft());
   const [date, setDate] = useState('');
   const [slot, setSlot] = useState(null);
   const [availability, setAvailability] = useState({ date: '', slots: [], loading: false, error: '' });
@@ -48,6 +48,7 @@ export default function Scheduling() {
     observer.observe(rootRef.current);
     const previous = resumeBooking.current;
     if (previous?.date >= clinicDateKey()) {
+      saveBookingDraft(previous);
       setDate(previous.date);
       loadSlots(previous.date, '', previous.horario);
     }
@@ -82,6 +83,7 @@ export default function Scheduling() {
     setSlot(null);
     setReceipt(null);
     setMessage('');
+    saveBookingDraft({ date: selectedDate });
     loadSlots(selectedDate);
   };
 
@@ -108,6 +110,7 @@ export default function Scheduling() {
       const result = await createAppointment(payload, token);
       if (!mounted.current) return;
       setReceipt({ data: payload.data, horario: payload.horario, fim: result.horarioFim || slot.fim, modalidade: payload.modalidade });
+      clearBookingDraft();
       setValues({ nome: user.nome, telefone: user.telefone || '', email: user.email, modalidade: 'online' });
       setErrors({});
       setSlot(null);
@@ -119,6 +122,8 @@ export default function Scheduling() {
         setMessage('Esse horário acabou de ser reservado. Escolha outro horário.');
         setSlot(null);
         loadSlots(payload.data, payload.horario);
+      } else if (!error.status || error.status >= 500) {
+        setMessage('Não foi possível confirmar a reserva agora. Seus dados e horário continuam selecionados. Confira Minhas consultas antes de tentar novamente.');
       } else {
         setMessage(error.message);
       }
@@ -133,13 +138,23 @@ export default function Scheduling() {
     rootRef.current?.querySelector('.booking-days button:not(:disabled)')?.focus();
   };
 
+  const persistBookingDraft = () => {
+    if (date) saveBookingDraft({ date, horario: slot?.horario });
+  };
+  const bookingStep = receipt || (date && slot) ? 3 : date ? 2 : 1;
+
   return (
     <section ref={rootRef} id="agendamento" className="scheduling-section section-space" aria-labelledby="booking-title">
       <div className="page-container">
         <div className="booking-heading">
-          <div><SectionLabel>AGENDAMENTO</SectionLabel><h2 id="booking-title" className="display-title">Um encontro.<br /><em>Um tempo para você.</em></h2></div>
+            <div><p className="eyebrow section-label"><span className="label-rule" aria-hidden="true" /><span>AGENDAMENTO</span></p><h2 id="booking-title" className="display-title">Um encontro.<br /><em>Um tempo para você.</em></h2></div>
           <div className="booking-intro"><FloralMark /><p>Escolha um dia e um horário disponível para começar. Os horários seguem o fuso de Brasília. Depois, conte como podemos entrar em contato.</p></div>
         </div>
+          <ol className="booking-progress" aria-label="Etapas do agendamento">
+            <li className={bookingStep === 1 ? 'is-current' : 'is-complete'} aria-current={bookingStep === 1 ? 'step' : undefined}><span>01</span><div><strong>Escolha uma data</strong><small>Veja os dias disponíveis</small></div></li>
+            <li className={bookingStep === 2 ? 'is-current' : bookingStep > 2 ? 'is-complete' : ''} aria-current={bookingStep === 2 ? 'step' : undefined}><span>02</span><div><strong>Defina o horário</strong><small>Selecione a melhor opção</small></div></li>
+            <li className={bookingStep === 3 ? 'is-current' : ''} aria-current={bookingStep === 3 ? 'step' : undefined}><span>03</span><div><strong>Confirme a reserva</strong><small>Entre ou crie sua conta</small></div></li>
+          </ol>
         <div className="booking-layout">
           <div className="booking-date-column">
             <h3 className="booking-step"><span>01</span> Escolha o dia</h3>
@@ -163,16 +178,22 @@ export default function Scheduling() {
               {availability.error && <div className="booking-feedback" role="alert"><p>{availability.error}</p><button type="button" className="text-link" onClick={() => loadSlots(date)}>Tentar novamente</button></div>}
               {!availability.loading && !availability.error && availability.date === date && <>
                 {!availability.slots.length && <div className="booking-empty" role="status"><p>Não há horários disponíveis para esta data.</p><button type="button" className="text-link" onClick={() => rootRef.current?.querySelector('.booking-days button:not(:disabled)')?.focus()}>Escolher outro dia</button></div>}
-                <div className="booking-slots" role="group" aria-label="Horários disponíveis">{availability.slots.map((item) => <button key={item.horario} type="button" disabled={submitting} aria-pressed={slot?.horario === item.horario} onClick={() => { setSlot(item); setMessage(''); }}><strong>{item.horario}</strong><small>até {item.fim}</small></button>)}</div>
+                <div className="booking-slots" role="group" aria-label="Horários disponíveis">{availability.slots.map((item) => <button key={item.horario} type="button" disabled={submitting} aria-pressed={slot?.horario === item.horario} onClick={() => { setSlot(item); setMessage(''); saveBookingDraft({ date, horario: item.horario }); }}><strong>{item.horario}</strong><small>até {item.fim}</small></button>)}</div>
               </>}
             </div>}
             {!isPatient && !receipt && <div className="booking-login-gate">
               <h3>{isProfessional ? 'Agendamento para pacientes' : 'Entre para reservar sua consulta'}</h3>
               <p>{isProfessional ? 'Para reservar, use uma conta de paciente. Sua agenda profissional está disponível no menu.' : publicConfig.demoMode ? 'Escolha seu horário e use o acesso fictício de demonstração para reservar.' : 'Escolha seu horário e entre na sua conta. Se for sua primeira vez, crie seu cadastro.'}</p>
-              <Link className="button button-dark" to="/login" state={{ booking: { date, horario: slot?.horario } }}>Entrar como paciente</Link>
-              {publicConfig.publicRegistration && <Link className="text-link" to="/cadastro" state={{ booking: { date, horario: slot?.horario } }}>Criar conta</Link>}
+              <Link className="button button-dark" to="/login" onClick={persistBookingDraft} state={{ booking: { date, horario: slot?.horario } }}>Entrar como paciente</Link>
+              {publicConfig.publicRegistration && <Link className="text-link" to="/cadastro" onClick={persistBookingDraft} state={{ booking: { date, horario: slot?.horario } }}>Criar conta</Link>}
             </div>}
             {date && slot && isPatient && <BookingForm date={date} slot={slot} values={values} errors={errors} submitting={submitting} onSubmit={submit} onChange={(key, value) => { setValues((current) => ({ ...current, [key]: value })); setErrors((current) => ({ ...current, [key]: undefined })); }} />}
+            <aside className="booking-guidance" aria-labelledby="booking-guidance-title">
+              <h3 id="booking-guidance-title">Antes de confirmar</h3>
+              <div><strong>Online</strong><p>Prepare um local reservado, com conexão estável, para a videochamada.</p></div>
+              <div><strong>Presencial</strong><p>Os detalhes do local e da chegada são confirmados diretamente no contato sobre o atendimento.</p></div>
+              <div><strong>Cancelamento e remarcação</strong><p>O cancelamento está disponível em Minhas consultas. Para remarcar, cancele o horário atual e escolha uma nova disponibilidade.</p></div>
+            </aside>
           </div>
         </div>
       </div>

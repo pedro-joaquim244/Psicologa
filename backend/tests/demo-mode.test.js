@@ -33,6 +33,24 @@ test('demo mode disables external email and public registration', (context) => {
   });
 });
 
+test('production enables registration only with email delivery and keeps demo access disabled', (context) => {
+  preserveEnvironment(context, ['DEMO_MODE', 'DEMO_PUBLIC_LOGIN', 'PUBLIC_REGISTRATION_ENABLED', 'EMAIL_PROVIDER']);
+  process.env.DEMO_MODE = 'false';
+  process.env.DEMO_PUBLIC_LOGIN = 'false';
+  process.env.PUBLIC_REGISTRATION_ENABLED = 'true';
+  process.env.EMAIL_PROVIDER = 'resend';
+
+  assert.equal(emailDeliveryEnabled(), true);
+  assert.equal(publicRegistrationEnabled(), true);
+  assert.equal(publicDemoLoginEnabled(), false);
+  assert.deepEqual(publicRuntimeConfig(), {
+    demoMode: false,
+    emailDelivery: true,
+    publicRegistration: true,
+    demoAccess: { paciente: false, profissional: false },
+  });
+});
+
 test('demo session uses only an active verified fictitious account', async (context) => {
   preserveEnvironment(context, ['DEMO_MODE', 'DEMO_PUBLIC_LOGIN', 'DEMO_PATIENT_EMAIL', 'JWT_SECRET']);
   process.env.DEMO_MODE = 'true';

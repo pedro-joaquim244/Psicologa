@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 
 export const agendaDay = '2030-09-18'; // Quarta-feira; relógio dos testes fica na semana anterior.
 export const weekdays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-const professional = { id: 7, nome: 'Helena Martins', email: 'helena@example.com', tipo: 'psicologa', email_verificado: true };
+const professional = { id: 7, nome: 'Mauricéia Soares', email: 'profissional@example.com', tipo: 'psicologa', email_verificado: true };
 const patient = { id: 2, nome: 'Paciente Teste', email: 'paciente@example.com', tipo: 'paciente', email_verificado: true };
 const initialAppointments = [
   { id: 1, nome_cliente: 'Marina Oliveira', inicio: `${agendaDay} 15:00:00`, fim: `${agendaDay} 15:50:00`, modalidade: 'online', status: 'agendado' },

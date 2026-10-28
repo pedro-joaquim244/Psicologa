@@ -62,9 +62,10 @@ test('teclado, foco e hover mantêm a interação acessível e discreta', async 
   if (testInfo.project.name !== 'mobile') {
     const background = await first.evaluate(el => getComputedStyle(el).backgroundColor);
     await first.hover();
-    await expect(first).toHaveCSS('color', 'rgb(89, 110, 91)');
+    const accent = await page.locator('html').evaluate((element) => getComputedStyle(element).getPropertyValue('--color-sage-ink').trim());
+    await expect(first).toHaveCSS('color', accent.startsWith('#') ? `rgb(${Number.parseInt(accent.slice(1, 3), 16)}, ${Number.parseInt(accent.slice(3, 5), 16)}, ${Number.parseInt(accent.slice(5, 7), 16)})` : accent);
     await expect(first).toHaveCSS('background-color', background);
-    await expect(section.locator('.audience-item').first()).toHaveCSS('border-bottom-color', 'rgb(89, 110, 91)');
+    await expect(section.locator('.audience-item').first()).toHaveCSS('border-bottom-color', accent.startsWith('#') ? `rgb(${Number.parseInt(accent.slice(1, 3), 16)}, ${Number.parseInt(accent.slice(3, 5), 16)}, ${Number.parseInt(accent.slice(5, 7), 16)})` : accent);
     await first.click();
     await expect(section.locator('.audience-close').first()).toHaveCSS('opacity', '1');
     await expect(section.locator('.audience-arrow').first()).toHaveCSS('opacity', '0');
@@ -76,7 +77,7 @@ test('CTA usa o agendamento existente, inclusive após expandir a lista', async 
   await section.getByRole('button', { name: 'Ansiedade', exact: true }).click();
   await expect.poll(() => section.locator('.audience-panel').first().evaluate(el => el.style.height)).toBe('auto');
   const cta = section.getByRole('link', { name: 'Agendar uma conversa', exact: true });
-  await expect(cta).toHaveAttribute('href', '#agendamento');
+  await expect(cta).toHaveAttribute('href', '/#agendamento');
   await cta.click();
   await expect(page).toHaveURL(/#agendamento$/);
   await expect(page.locator('#agendamento')).toHaveCount(1);

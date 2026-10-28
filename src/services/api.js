@@ -1,6 +1,21 @@
 import { clearSessionForToken } from "./authStorage";
 
-export const API_URL = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://localhost:3333" : "")).replace(/\/$/, "");
+function normalizeApiUrl(value) {
+  const configured = String(value ?? '').trim();
+  if (!configured) return import.meta.env.DEV ? 'http://localhost:3333' : '';
+  try {
+    const url = new URL(configured);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash || !['', '/'].includes(url.pathname)) {
+      throw new Error('invalid');
+    }
+    return url.origin;
+  } catch {
+    console.error('VITE_API_URL deve conter somente a origem HTTP(S) da API, sem /api ou caminho adicional.');
+    return '';
+  }
+}
+
+export const API_URL = normalizeApiUrl(import.meta.env.VITE_API_URL);
 export const AUTH_EXPIRED_EVENT = "psicologa:auth-expired";
 export const RATE_LIMIT_MESSAGE = "Você realizou muitas ações em pouco tempo. Aguarde alguns instantes e tente novamente.";
 
@@ -87,6 +102,14 @@ export function updateAppointmentStatus(id, action, token, options = {}) {
   return apiRequest(`/api/agendamentos/${encodeURIComponent(id)}/${action}`, { method: "PATCH", token, ...options });
 }
 
+export function rescheduleAppointment(id, details, token, options = {}) {
+  return apiRequest(`/api/agendamentos/${encodeURIComponent(id)}/reagendar`, { method: 'PATCH', body: details, token, ...options });
+}
+
+export function declineAppointment(id, token, options = {}) {
+  return apiRequest(`/api/agendamentos/${encodeURIComponent(id)}/recusar`, { method: 'PATCH', token, ...options });
+}
+
 export async function listAvailableSlots(date, options = {}) {
   const data = await apiRequest(`/api/horarios?${new URLSearchParams({ data: date })}`, options);
   if (!Array.isArray(data?.horarios)) throw new ApiError("Não foi possível ler os horários disponíveis. Tente novamente.");
@@ -130,6 +153,10 @@ export async function cancelPatientAppointment(id, token) {
 
 export function getPatientAccount(token, options = {}) {
   return apiRequest('/api/pacientes/me', { method: 'GET', token, ...options });
+}
+
+export function updatePatientAccount(details, token) {
+  return apiRequest('/api/pacientes/me', { method: 'PATCH', body: details, token });
 }
 
 export async function getAgendaAvailability(date, token, options = {}) {

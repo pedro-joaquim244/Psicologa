@@ -7,10 +7,8 @@ import '../../styles/reflection.css';
 
 function animateReflection({ desktop, tablet, reduced }, root) {
   if (reduced) return;
-  const colors = getComputedStyle(root);
   const timeline = gsap.timeline({ scrollTrigger: { trigger: root, start: 'top 85%', end: 'center 55%', scrub: 1 } });
-  timeline.fromTo(root, { backgroundColor: colors.getPropertyValue('--color-background').trim() }, { backgroundColor: colors.getPropertyValue('--color-blue').trim(), duration: 1, ease: 'none' })
-    .from('.reflection-title > span', { y: desktop ? 38 : 16, opacity: .35, stagger: .12, duration: .6 }, 0);
+  timeline.from('.reflection-title > span', { y: desktop ? 38 : 16, opacity: .35, stagger: .12, duration: .6 }, 0);
   if (desktop || tablet) gsap.fromTo('[data-botanical]', { yPercent: 8 }, { yPercent: -10, stagger: .1, ease: 'none', scrollTrigger: { trigger: root, start: 'top bottom', end: 'bottom top', scrub: 1 } });
 }
 

@@ -19,7 +19,7 @@ function snapshot(appointment) {
     inicio: appointment.inicio,
     fim: appointment.fim,
     modalidade: appointment.modalidade === 'presencial' ? 'presencial' : 'online',
-    profissionalNome: String(appointment.profissional_nome || 'Helena Martins').slice(0, 150),
+    profissionalNome: String(appointment.profissional_nome || 'Mauricéia Soares').slice(0, 150),
   };
 }
 

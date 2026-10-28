@@ -5,8 +5,8 @@
 .service-row.is-active { background: var(--paper-dark); }
 .services-preview { position: relative; aspect-ratio: 4 / 3; width: 100%; overflow: hidden; border-radius: 16px; background: var(--paper-dark); isolation: isolate; }
 .services-preview img { width: 100%; height: 100%; transition: transform 900ms var(--ease-editorial); }
-.services-preview::after { content: ''; position: absolute; inset: 55% 0 0; background: linear-gradient(transparent, rgb(20 36 26 / 72%)); pointer-events: none; }
-.services-preview figcaption { position: absolute; z-index: 1; inset: auto 24px 24px; color: var(--paper); font-family: var(--serif); font-size: 1.5rem; font-style: italic; line-height: 1.2; }
+.services-preview::after { content: ''; position: absolute; inset: 55% 0 0; background: linear-gradient(transparent, var(--color-image-shade)); pointer-events: none; }
+.services-preview figcaption { position: absolute; z-index: 1; inset: auto 24px 24px; color: var(--color-on-dark); font-family: var(--serif); font-size: 1.5rem; font-style: italic; line-height: 1.2; }
 .service-content { display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: start; gap: 24px; padding-block: 16px; }
 .service-number { font-family: var(--serif); font-size: 1.5rem; color: var(--muted); }
 .service-title { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
@@ -18,6 +18,10 @@
 .service-location { display: block; margin-top: 16px; font-size: .75rem; }
 .service-location .bi { margin-right: 8px; }
 .service-link { grid-column: 2; justify-self: start; min-height: 44px; border-bottom: var(--border-rule); }
+.services-booking-cta { display: flex; justify-content: space-between; align-items: center; gap: var(--space-lg); padding: var(--space-lg) 0 0; margin-top: var(--space-lg); border-top: var(--border-rule); }
+.services-booking-cta .eyebrow { color: var(--color-sage-ink); }
+.services-booking-cta p { max-width: 520px; margin-top: var(--space-xs); color: var(--muted); }
+.services-booking-cta .button { flex: 0 0 auto; font-size: var(--fs-small); }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) { .service-row:hover .services-preview img { transform: scale(1.025); } }
 @media (max-width: 1023px) {
   .section-intro > * { width: 100%; }
@@ -34,4 +38,6 @@
   .service-content { padding: 0 0 8px; }
   .service-title h3 { font-size: var(--fs-heading); }
   .service-title > .bi { display: block; }
+  .services-booking-cta { display: grid; gap: var(--space-md); margin-top: var(--space-lg); }
+  .services-booking-cta .button { justify-content: space-between; width: 100%; }
 }

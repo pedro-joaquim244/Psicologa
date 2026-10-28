@@ -4,6 +4,7 @@ import SectionLink from '../Shared/SectionLink';
 import UserMenu from '../UserMenu/UserMenu';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import ThemeToggle from '../Shared/ThemeToggle';
 import '../../styles/navbar.css';
 
 const links = [['Início', 'inicio'], ['Sobre', 'sobre'], ['Abordagem', 'abordagem'], ['Atendimento', 'atendimento'], ['FAQ', 'faq']];
@@ -65,12 +66,15 @@ export default function Navbar() {
       <a href="#conteudo" className="skip-link">Pular para o conteúdo</a>
       <div className="page-container header-inner">
         <SectionLink section="inicio" className="brand" aria-label={`${site.name}, início`} onClick={() => setOpen(false)}>
-          <span className="brand-monogram" aria-hidden="true">h<span>m</span></span>
+          <span className="brand-monogram" aria-hidden="true">m<span>s</span></span>
           <span className="brand-copy"><span>{site.name}</span><small>PSICOLOGIA & ESCUTA</small></span>
         </SectionLink>
-        <button ref={toggleRef} className="menu-toggle" type="button" aria-expanded={open} aria-controls="main-navigation" aria-label={open ? 'Fechar menu' : 'Abrir menu'} onClick={() => setOpen(!open)}>
-          <span /> <span />
-        </button>
+        <div className="header-controls">
+          <ThemeToggle />
+          <button ref={toggleRef} className="menu-toggle" type="button" aria-expanded={open} aria-controls="main-navigation" aria-label={open ? 'Fechar menu' : 'Abrir menu'} onClick={() => setOpen(!open)}>
+            <span /> <span />
+          </button>
+        </div>
         <nav id="main-navigation" className={`main-navigation ${open ? 'is-open' : ''}`} aria-label="Navegação principal">
           {links.map(([label, id]) => <SectionLink key={id} section={id} aria-current={active === id ? 'location' : undefined} onClick={() => setOpen(false)}>{label}</SectionLink>)}
           <SectionLink section="agendamento" className="arrow-link header-cta" aria-current={['agendamento', 'contato'].includes(active) ? 'location' : undefined} onClick={() => setOpen(false)}><span>Agendar consulta</span><i className="bi bi-arrow-up-right" aria-hidden="true" /></SectionLink>

@@ -8,6 +8,7 @@ async function mockApi(page) {
   await page.clock.setFixedTime(new Date('2030-09-10T15:00:00Z'));
   await page.route('**/api/**', route => {
     const path = new URL(route.request().url()).pathname;
+    if (path === '/api/config') return route.fulfill({ json: { demoMode: false, emailDelivery: true, publicRegistration: true, demoAccess: { paciente: false, profissional: false } } });
     if (path === '/api/horarios') return route.fulfill({ json: { horarios: [{ horario: '09:00', fim: '09:50' }] } });
     if (path.endsWith('/me')) return route.fulfill({ json: { usuario: patient } });
     if (path.endsWith('/login')) return route.fulfill({ status: 403, json: { erro: 'Confirme seu e-mail antes de entrar.', codigo: 'EMAIL_NAO_VERIFICADO', verificacaoPendente: true, desafio: 'a'.repeat(64), email: patient.email, expiraEm: Date.now() + 600000, reenviarEm: Date.now() + 60000 } });
@@ -31,7 +32,7 @@ async function seed(page, kind) {
     localStorage.clear();
     const professional = kind === 'profissional';
     localStorage.setItem(professional ? 'psicologa_token' : 'paciente_token', 'responsive-test-token');
-    localStorage.setItem(professional ? 'psicologa_usuario' : 'paciente_usuario', JSON.stringify(professional ? { id: 1, nome: 'Dra. Helena', tipo: 'psicologa' } : patient));
+    localStorage.setItem(professional ? 'psicologa_usuario' : 'paciente_usuario', JSON.stringify(professional ? { id: 1, nome: 'Mauricéia Soares', tipo: 'psicologa' } : patient));
   }, { kind, patient });
 }
 for (const [width, height] of sizes) {

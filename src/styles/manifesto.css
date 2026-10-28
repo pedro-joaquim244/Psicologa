@@ -1,4 +1,4 @@
-.manifesto-section { background: var(--forest); color: var(--paper); padding-block: var(--space-xl) var(--space-section); min-height: 90svh; display: flex; align-items: center; }
+.manifesto-section { background: var(--color-deep-surface); color: var(--color-on-dark); padding-block: var(--space-xl) var(--space-section); min-height: 90svh; display: flex; align-items: center; }
 .manifesto-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-xl); }
 .manifesto-top .eyebrow { color: var(--color-on-dark-muted); }
 .manifesto-top .floral-mark { color: var(--color-on-dark-muted); }

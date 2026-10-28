@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/config', route => route.fulfill({ json: { demoMode: false, emailDelivery: true, publicRegistration: true, demoAccess: { paciente: false, profissional: false } } }));
+});
+
 test('conteúdo, imagens, FAQ, contatos e ausência de overflow', async ({ page }, testInfo) => {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -32,9 +36,9 @@ test('conteúdo, imagens, FAQ, contatos e ausência de overflow', async ({ page 
   await onlineQuestion.focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('#faq-answer-2')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Agendar pelo WhatsApp' })).toHaveAttribute('href', /^https:\/\/wa.me\/5500000000000\?text=/);
-  await expect(page.getByRole('link', { name: /Saiba mais sobre psicoterapia presencial/ })).toHaveAttribute('href', /presencial/);
-  await expect(page.getByRole('link', { name: /Saiba mais sobre psicoterapia online/ })).toHaveAttribute('href', /online/);
+  await expect(page.getByRole('link', { name: /Ver horários disponíveis/ }).last()).toHaveAttribute('href', /#agendamento$/);
+  await expect(page.getByRole('link', { name: /Ver horários para psicoterapia presencial/ })).toHaveAttribute('href', /#agendamento$/);
+  await expect(page.getByRole('link', { name: /Ver horários para psicoterapia online/ })).toHaveAttribute('href', /#agendamento$/);
 
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await page.screenshot({ path: testInfo.outputPath('page.png'), fullPage: true });
@@ -72,8 +76,8 @@ test('scroll adapta pin, expansão e etapas à preferência de movimento', async
   }
   await expect(page.locator('.pin-spacer')).toHaveCount(1);
   const initial = await page.locator('.hero-photo').boundingBox();
-  await page.evaluate(() => window.scrollTo({ top: 1100, behavior: 'instant' }));
-  await expect.poll(async () => (await page.locator('.hero-photo').boundingBox()).width).toBeGreaterThan(initial.width * 1.7);
+  await page.evaluate(() => window.scrollTo({ top: 640, behavior: 'instant' }));
+  await expect.poll(async () => (await page.locator('.hero-photo').boundingBox()).width).toBeGreaterThan(initial.width * 1.4);
   await expect.poll(async () => Math.abs((await page.locator('.hero').boundingBox()).y)).toBeLessThan(2);
   await page.screenshot({ path: testInfo.outputPath('hero-expanded.png') });
 

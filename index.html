@@ -10,10 +10,41 @@
 
     <meta name="theme-color" content="#F3F1EA" />
 
+    <script>
+      (() => {
+        try {
+          const stored = localStorage.getItem('psicologa_tema');
+          const theme = stored === 'light' || stored === 'dark'
+            ? stored
+            : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+          document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#0b0b0c' : '#f3f1ea';
+        } catch {
+          document.documentElement.dataset.theme = 'light';
+        }
+      })();
+    </script>
+
     <meta
       name="description"
-      content="Um espaço de escuta, acolhimento e autoconhecimento. Conheça o trabalho da psicóloga Helena Martins, com atendimento presencial em Ribeirão Preto e online."
+      content="Psicologia, escuta e acolhimento com Mauricéia Soares, em atendimentos online e presenciais."
     />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://psicologa-olive.vercel.app/" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mauricéia Soares | Psicologia & Escuta" />
+    <meta property="og:description" content="Atendimento psicológico online e presencial, com um espaço de escuta e acolhimento." />
+    <meta property="og:url" content="https://psicologa-olive.vercel.app/" />
+    <meta property="og:image" content="https://psicologa-olive.vercel.app/images/og-mauriceia-soares.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Sala acolhedora para atendimento psicológico" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Mauricéia Soares | Psicologia & Escuta" />
+    <meta name="twitter:description" content="Atendimento psicológico online e presencial, com um espaço de escuta e acolhimento." />
+    <meta name="twitter:image" content="https://psicologa-olive.vercel.app/images/og-mauriceia-soares.jpg" />
 
     <link
       rel="icon"
@@ -37,7 +68,7 @@
       rel="stylesheet"
     />
 
-    <title>Helena Martins — Psicologia & Escuta</title>
+    <title>Mauricéia Soares — Psicologia & Escuta</title>
   </head>
 
   <body>
